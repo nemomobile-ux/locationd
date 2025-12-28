@@ -1,0 +1,12 @@
+[Unit]
+Description=Location Daemon
+After=network.target dbus.service
+Wants=dbus.service
+
+[Service]
+Type=simple
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/locationd
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
