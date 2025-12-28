@@ -18,6 +18,10 @@
  */
 
 #include "cellplugin.h"
+
+#include <QDBusInterface>
+#include <QDBusObjectPath>
+#include <QDBusReply>
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -29,9 +33,6 @@
 CellProvider::CellProvider(QObject* parent)
     : ILocationProvider(parent)
 {
-    m_updateTimer.setInterval(30000);
-    m_updateTimer.setSingleShot(true);
-    connect(&m_updateTimer, &QTimer::timeout, this, &CellProvider::queryMLS);
 }
 
 CellProvider::~CellProvider()
@@ -41,24 +42,68 @@ CellProvider::~CellProvider()
 void CellProvider::requestLocationUpdate()
 {
     fetchCellData();
-    m_updateTimer.start();
+
+    if (m_cells.isEmpty()) {
+        qWarning() << "CellProvider: no cell data";
+        m_available = false;
+        return;
+    }
+
+    queryMLS();
 }
 
 void CellProvider::fetchCellData()
 {
-    // TODO: fetch real data from ofono
     m_cells.clear();
-    m_cells.append({ 12345, 101, 310, 260, -70 });
-    m_cells.append({ 12346, 101, 310, 260, -85 });
+
+    QDBusInterface manager(
+        "org.ofono",
+        "/",
+        "org.ofono.Manager",
+        QDBusConnection::systemBus());
+
+    QDBusReply<QList<QDBusObjectPath>> modems = manager.call("GetModems");
+
+    if (!modems.isValid())
+        return;
+
+    for (const QDBusObjectPath& path : modems.value()) {
+        QDBusInterface netreg(
+            "org.ofono",
+            path.path(),
+            "org.ofono.NetworkRegistration",
+            QDBusConnection::systemBus());
+
+        if (!netreg.isValid())
+            continue;
+
+        QDBusReply<QVariantMap> props = netreg.call("GetProperties");
+
+        if (!props.isValid())
+            continue;
+
+        const QVariantMap p = props.value();
+
+        if (!p.contains("CellId"))
+            continue;
+
+        CellTower c;
+        c.cellId = p["CellId"].toInt();
+        c.locationAreaCode = p["LocationAreaCode"].toInt();
+        c.mobileCountryCode = p["MobileCountryCode"].toString().toInt();
+        c.mobileNetworkCode = p["MobileNetworkCode"].toString().toInt();
+        c.signalStrength = p.value("Strength", -80).toInt();
+
+        m_cells.append(c);
+    }
+
+    qInfo() << "CellProvider:" << m_cells.size() << "cells collected";
 }
 
 void CellProvider::queryMLS()
 {
-    if (m_cells.isEmpty())
-        return;
-
-    QJsonObject root;
     QJsonArray cells;
+
     for (const CellTower& t : m_cells) {
         QJsonObject c;
         c["cellId"] = t.cellId;
@@ -66,33 +111,34 @@ void CellProvider::queryMLS()
         c["mobileCountryCode"] = t.mobileCountryCode;
         c["mobileNetworkCode"] = t.mobileNetworkCode;
         c["signalStrength"] = t.signalStrength;
-        c["radioType"] = "gsm";
+        c["radioType"] = "lte"; // лучше, чем gsm по умолчанию
         cells.append(c);
     }
+
+    QJsonObject root;
     root["cellTowers"] = cells;
 
     QNetworkRequest req(QUrl("https://location.services.mozilla.com/v1/geolocate?key=test"));
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
-    QNetworkReply* reply = manager->post(req, QJsonDocument(root).toJson());
+    auto* nam = new QNetworkAccessManager(this);
+    QNetworkReply* reply = nam->post(req, QJsonDocument(root).toJson());
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        if (reply->error() != QNetworkReply::NoError) {
-            qWarning() << "MLS request failed:" << reply->errorString();
-        } else {
-            QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-            QJsonObject obj = doc.object();
-            if (obj.contains("location")) {
-                QJsonObject loc = obj["location"].toObject();
-                double lat = loc["lat"].toDouble();
-                double lon = loc["lng"].toDouble();
-                int acc = obj["accuracy"].toInt();
-                handleMLSResponse(lat, lon, acc);
-            }
-        }
         reply->deleteLater();
-        reply->manager()->deleteLater();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            qWarning() << "MLS error:" << reply->errorString();
+            return;
+        }
+
+        const QJsonObject obj = QJsonDocument::fromJson(reply->readAll()).object();
+
+        const QJsonObject loc = obj["location"].toObject();
+        handleMLSResponse(
+            loc["lat"].toDouble(),
+            loc["lng"].toDouble(),
+            obj["accuracy"].toInt());
     });
 }
 
@@ -101,7 +147,10 @@ void CellProvider::handleMLSResponse(double lat, double lon, int accuracy)
     m_latitude = lat;
     m_longitude = lon;
     m_altitude = 0.0;
+
+    m_accuracy.level = static_cast<int>(AccuracyLevel::STREET);
     m_accuracy.horizontal = accuracy;
+
     m_available = true;
 
     emit updated();

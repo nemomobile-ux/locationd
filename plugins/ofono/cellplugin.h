@@ -1,4 +1,3 @@
-#ifndef CELLPROVIDER_H
 /*
  * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
  *
@@ -18,6 +17,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef CELLPROVIDER_H
 #define CELLPROVIDER_H
 
 #include "ilocationprovider.h"
