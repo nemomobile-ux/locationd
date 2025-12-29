@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<node name="/">
+        <interface name="org.freedesktop.Geoclue.Address">
+		<method name="GetAddress">
+                        <arg type="i" name="timestamp" direction="out" />
+                        <arg name="address" type="a{ss}" direction="out" />
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out1" value="QVariantMap"/>
+                        <arg name="accuracy" type="(idd)" direction="out" />
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out2" value="Accuracy"/>
+		</method>
+
+		<signal name="AddressChanged">
+		        <arg type="i" name="timestamp" />
+		        <arg type="a{ss}" name="address" />
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out1" value="QVariantMap"/>
+			<arg type="(idd)" name="accuracy" />
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out2" value="Accuracy"/>
+		</signal>
+	</interface>
+</node>

@@ -29,7 +29,27 @@ public:
     explicit GeoClue1Service(ILocationProvider* provider, QObject* parent = nullptr);
     int GetPosition(int& timestamp, double& latitude, double& longitude, double& altitude, Accuracy& accuracy);
     QVector<SatInfoFull> GetSatellites();
-    int GetVelocity(int& fields, int& timestamp, double& speed, double& direction, double& climb);
+    int GetLastSatellite(int &satellite_used, int &satellite_visible, UsedPRN &used_prn, UsedSat &sat_info);
+    int GetSatellite(int &satellite_used, int &satellite_visible, UsedPRN &used_prn, UsedSat &sat_info);
+
+    int GetVelocity(int& timestamp, double& speed, double& direction, double& climb);
+    int GetAddress(QVariantMap& address, Accuracy& accuracy);
+    void AddReference();
+    QString GetProviderInfo(QString& Description);
+    int GetStatus();
+    void RemoveReference();
+    void SetOptions(const QVariantMap &options);
+    int AddressToPosition(const QVariantMap &address, double &latitude, double &longitude, double &altitude, Accuracy &accuracy);
+    int FreeformAddressToPosition(const QString &address, double &latitude, double &longitude, double &altitude, Accuracy &accuracy);
+    QDBusObjectPath Create();
+
+    void AddressStart();
+    QString GetAddressProvider(QString &description, QString &service, QString &path);
+    QString GetPositionProvider(QString &description, QString &service, QString &path);
+    void PositionStart();
+    void SetRequirements(int accuracy_level, int time, bool require_updates, int allowed_resources);
+
+    QVariantMap PositionToAddress(double latitude, double longitude, Accuracy position_accuracy, Accuracy &address_accuracy);
 
 private:
     ILocationProvider* m_provider;

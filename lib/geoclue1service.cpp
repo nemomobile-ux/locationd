@@ -58,10 +58,21 @@ QVector<SatInfoFull> GeoClue1Service::GetSatellites()
     return m_provider->satellites();
 }
 
-int GeoClue1Service::GetVelocity(int& fields, int& timestamp, double& speed, double& direction, double& climb)
+int GeoClue1Service::GetLastSatellite(int &satellite_used, int &satellite_visible, UsedPRN &used_prn, UsedSat &sat_info)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return -1;
+}
+
+int GeoClue1Service::GetSatellite(int &satellite_used, int &satellite_visible, UsedPRN &used_prn, UsedSat &sat_info)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return -1;
+}
+
+int GeoClue1Service::GetVelocity(int& timestamp, double& speed, double& direction, double& climb)
 {
     if (!m_provider || !m_provider->isAvailable()) {
-        fields = 0;
         timestamp = QDateTime::currentSecsSinceEpoch();
         speed = 0.0;
         direction = 0.0;
@@ -69,7 +80,6 @@ int GeoClue1Service::GetVelocity(int& fields, int& timestamp, double& speed, dou
         return -1;
     }
 
-    fields = 3; // speed, direction, climb
     timestamp = QDateTime::currentSecsSinceEpoch();
     speed = m_provider->speed(); // m/s
     direction = m_provider->direction(); // degrees
@@ -89,3 +99,88 @@ int GeoClue1Service::GetVelocity(int& fields, int& timestamp, double& speed, dou
 
     return 0;
 }
+
+int GeoClue1Service::GetAddress(QVariantMap &address, Accuracy &accuracy)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return -1;
+}
+
+void GeoClue1Service::AddReference()
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+}
+
+QString GeoClue1Service::GetProviderInfo(QString &Description)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return "";
+}
+
+int GeoClue1Service::GetStatus()
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return -1;
+}
+
+void GeoClue1Service::RemoveReference()
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+}
+
+void GeoClue1Service::SetOptions(const QVariantMap &options)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+}
+
+int GeoClue1Service::AddressToPosition(const QVariantMap &address, double &latitude, double &longitude, double &altitude, Accuracy &accuracy)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return -1;
+}
+
+int GeoClue1Service::FreeformAddressToPosition(const QString &address, double &latitude, double &longitude, double &altitude, Accuracy &accuracy)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return -1;
+}
+
+QDBusObjectPath GeoClue1Service::Create()
+{
+    return QDBusObjectPath();
+}
+
+void GeoClue1Service::AddressStart()
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+}
+
+QString GeoClue1Service::GetAddressProvider(QString &description, QString &service, QString &path)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return QString();
+}
+
+QString GeoClue1Service::GetPositionProvider(QString &description, QString &service, QString &path)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return QString();
+}
+
+void GeoClue1Service::PositionStart()
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+}
+
+void GeoClue1Service::SetRequirements(int accuracy_level, int time, bool require_updates, int allowed_resources)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+}
+
+QVariantMap GeoClue1Service::PositionToAddress(double latitude, double longitude, Accuracy position_accuracy, Accuracy &address_accuracy)
+{
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    return QVariantMap();
+}
+
+
