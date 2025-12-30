@@ -49,6 +49,8 @@ public:
     }
     virtual ~ILocationProvider() { }
 
+    virtual void setActive(bool active) = 0;
+
     virtual bool isAvailable() const = 0;
     virtual int priority() const = 0;
 

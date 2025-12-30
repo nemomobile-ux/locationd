@@ -39,6 +39,11 @@ CellProvider::~CellProvider()
 {
 }
 
+void CellProvider::setActive(bool active)
+{
+
+}
+
 void CellProvider::requestLocationUpdate()
 {
     fetchCellData();

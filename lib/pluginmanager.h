@@ -33,6 +33,7 @@ public:
 
     ILocationProvider* bestProvider() const { return m_bestProvider; }
 
+    void setActive(bool active) override;
     bool isAvailable() const override { return m_bestProvider && m_bestProvider->isAvailable(); }
     int priority() const override { return m_bestProvider ? m_bestProvider->priority() : 0; }
 

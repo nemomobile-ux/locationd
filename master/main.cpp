@@ -23,8 +23,9 @@
 #include <QDebug>
 
 #include "geoclue1service.h"
-#include "pluginmanager.h"
-
+#include "geoclueadaptor.h"
+#include "masteradaptor.h"
+#include "masterclientdaptor.h"
 #include "positionadaptor.h"
 #include "satelliteadaptor.h"
 #include "velocityadaptor.h"
@@ -32,40 +33,39 @@
 int main(int argc, char* argv[])
 {
     QCoreApplication app(argc, argv);
-    app.setApplicationName("locationd");
+    app.setApplicationName("geoclue-master");
     app.setOrganizationName("nemomobile");
 
-    QDBusConnection bus = QDBusConnection::systemBus();
+    QDBusConnection bus = QDBusConnection::sessionBus();
     if (!bus.isConnected()) {
-        qCritical() << "Cannot connect to system D-Bus:"
-                    << bus.lastError().message();
+        qCritical() << "Cannot connect to system D-Bus:" << bus.lastError().message();
         return 1;
     }
 
-    if (!bus.registerService("org.freedesktop.Geoclue")) {
-        qCritical() << "Cannot register D-Bus service:"
-                    << bus.lastError().message();
+    if (!bus.registerService("org.freedesktop.Geoclue.Master")) {
+        qCritical() << "Cannot register D-Bus service:" << bus.lastError().message();
         return 1;
     }
 
-    PluginManager pluginManager;
-    pluginManager.loadPlugins("/usr/lib/locationd/plugins");
+    // Master service
+    GeoClue1Service masterService;
+    MasterAdaptor masterAdaptor(&masterService);
 
-    GeoClue1Service geoclue(pluginManager.bestProvider());
-
-    PositionAdaptor positionAdaptor(&geoclue);
-    SatelliteAdaptor satelliteAdaptor(&geoclue);
-    VelocityAdaptor velocityAdaptor(&geoclue);
-
-    if (!bus.registerObject("/org/freedesktop/Geoclue",
-            &geoclue,
+    if (!bus.registerObject(
+            QStringLiteral("/org/freedesktop/Geoclue/Master"),
+            &masterService,
             QDBusConnection::ExportAdaptors)) {
-        qCritical() << "Cannot register D-Bus object:"
-                    << bus.lastError().message();
+        qCritical() << "Failed to register Master object:" << bus.lastError().message();
         return 1;
     }
 
-    qInfo() << "locationd started (GeoClue v1 compatible)";
+    GeoclueAdaptor geoclueAdaptor(&masterService);
+    PositionAdaptor positionAdaptor(&masterService);
+    SatelliteAdaptor satelliteAdaptor(&masterService);
+    VelocityAdaptor velocityAdaptor(&masterService);
+    MasterClientAdaptor masteclientAdaptor(&masterService);
+
+    qInfo() << "GeoClue Master service started";
 
     return app.exec();
 }

@@ -39,6 +39,7 @@ public:
     explicit WifiProvider(QObject* parent = nullptr);
     ~WifiProvider() override;
 
+    void setActive(bool active) override;
     bool isAvailable() const override { return m_available; }
     int priority() const override { return 60; }
 

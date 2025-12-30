@@ -35,6 +35,7 @@ public:
     explicit GPSProvider(QObject* parent = nullptr);
     ~GPSProvider() override;
 
+    void setActive(bool active) override;
     bool isAvailable() const override { return m_fd >= 0; }
     int priority() const override { return 100; }
 

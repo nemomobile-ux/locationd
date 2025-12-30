@@ -41,6 +41,8 @@ public:
     explicit CellProvider(QObject* parent = nullptr);
     ~CellProvider() override;
 
+    void setActive(bool active) override;
+
     bool isAvailable() const override { return m_available; }
     int priority() const override { return 50; }
 

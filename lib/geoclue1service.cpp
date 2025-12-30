@@ -19,40 +19,35 @@
 
 #include "geoclue1service.h"
 
-GeoClue1Service::GeoClue1Service(ILocationProvider* provider, QObject* parent)
+GeoClue1Service::GeoClue1Service(QObject* parent)
     : QObject(parent)
-    , m_provider(provider)
+    , m_positionState(PositionState::Stopped)
+    , m_refCount(0)
+    , m_clientCount(0)
 {
+
+    m_pluginManager = new PluginManager(this);
+    m_pluginManager->loadPlugins("/usr/lib/locationd/plugins");
 }
 
 int GeoClue1Service::GetPosition(int& timestamp, double& latitude, double& longitude, double& altitude, Accuracy& accuracy)
 {
-    if (!m_provider || !m_provider->isAvailable()) {
-        timestamp = 0;
-        latitude = 0.0;
-        longitude = 0.0;
-        altitude = 0.0;
-        accuracy = Accuracy {};
+    qDebug() << Q_FUNC_INFO;
+    if (!m_provider || !m_provider->isAvailable())
         return -1;
-    }
 
-    m_provider->requestLocationUpdate();
-
-    timestamp = QDateTime::currentSecsSinceEpoch();
-    latitude = m_provider->latitude();
-    longitude = m_provider->longitude();
-    altitude = m_provider->altitude();
-
-    Accuracy provAcc = m_provider->accuracy();
-    accuracy.level = provAcc.level;
-    accuracy.horizontal = provAcc.horizontal;
-    accuracy.vertical = provAcc.vertical;
+    timestamp = m_lastTimestamp;
+    latitude  = m_lastLatitude;
+    longitude = m_lastLongitude;
+    altitude  = m_lastAltitude;
+    accuracy  = m_lastAccuracy;
 
     return 0;
 }
 
 QVector<SatInfoFull> GeoClue1Service::GetSatellites()
 {
+    qDebug() << Q_FUNC_INFO;
     if (!m_provider)
         return {};
     return m_provider->satellites();
@@ -66,12 +61,13 @@ int GeoClue1Service::GetLastSatellite(int &satellite_used, int &satellite_visibl
 
 int GeoClue1Service::GetSatellite(int &satellite_used, int &satellite_visible, UsedPRN &used_prn, UsedSat &sat_info)
 {
-    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    qDebug() << Q_FUNC_INFO << "Not implemented yeat" << satellite_used << satellite_visible;
     return -1;
 }
 
 int GeoClue1Service::GetVelocity(int& timestamp, double& speed, double& direction, double& climb)
 {
+    qDebug() << Q_FUNC_INFO;
     if (!m_provider || !m_provider->isAvailable()) {
         timestamp = QDateTime::currentSecsSinceEpoch();
         speed = 0.0;
@@ -108,8 +104,28 @@ int GeoClue1Service::GetAddress(QVariantMap &address, Accuracy &accuracy)
 
 void GeoClue1Service::AddReference()
 {
-    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    qDebug() << Q_FUNC_INFO;
+    m_refCount++;
+
+    if (m_refCount == 1) {
+        if (m_provider) {
+            m_provider->setActive(true);
+        }
+    }
 }
+
+void GeoClue1Service::RemoveReference()
+{
+    qDebug() << Q_FUNC_INFO;
+    if (m_refCount > 0)
+        m_refCount--;
+
+    if (m_refCount == 0) {
+        if (m_provider)
+            m_provider->setActive(false);
+    }
+}
+
 
 QString GeoClue1Service::GetProviderInfo(QString &Description)
 {
@@ -121,11 +137,6 @@ int GeoClue1Service::GetStatus()
 {
     qDebug() << Q_FUNC_INFO << "Not implemented yeat";
     return -1;
-}
-
-void GeoClue1Service::RemoveReference()
-{
-    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
 }
 
 void GeoClue1Service::SetOptions(const QVariantMap &options)
@@ -147,7 +158,24 @@ int GeoClue1Service::FreeformAddressToPosition(const QString &address, double &l
 
 QDBusObjectPath GeoClue1Service::Create()
 {
-    return QDBusObjectPath();
+    qDebug() << Q_FUNC_INFO;
+    QString path = QString("/org/freedesktop/Geoclue/Client%1").arg(++m_clientCount);
+
+    if(!QDBusConnection::sessionBus().registerObject(
+        path,
+        this,
+        QDBusConnection::ExportAdaptors
+    )) {
+        qWarning() << "Failed to register client object:" << QDBusConnection::sessionBus().lastError().message();
+    }
+
+    m_provider = m_pluginManager->bestProvider();
+    if(m_provider) {
+        connect(m_provider, &ILocationProvider::updated, this, &GeoClue1Service::onProviderUpdated);
+        emit PositionProviderChanged("locationd", "Location daemon", "org.freedesktop.Geoclue.Master", path);
+    }
+
+    return QDBusObjectPath(path);
 }
 
 void GeoClue1Service::AddressStart()
@@ -169,18 +197,58 @@ QString GeoClue1Service::GetPositionProvider(QString &description, QString &serv
 
 void GeoClue1Service::PositionStart()
 {
-    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    qDebug() << Q_FUNC_INFO;
+    if (!m_provider)
+        return;
+
+    m_positionState = PositionState::Running;
+    m_provider->requestLocationUpdate();
 }
 
 void GeoClue1Service::SetRequirements(int accuracy_level, int time, bool require_updates, int allowed_resources)
 {
-    qDebug() << Q_FUNC_INFO << "Not implemented yeat";
+    qDebug() << Q_FUNC_INFO << accuracy_level << time << require_updates << allowed_resources;
+    Q_UNUSED(accuracy_level)
+    Q_UNUSED(time)
+    Q_UNUSED(require_updates)
+    Q_UNUSED(allowed_resources)
+    if (m_provider) {
+        m_provider->requestLocationUpdate();
+    } else {
+        qDebug() << "No providers!";
+    }
 }
 
 QVariantMap GeoClue1Service::PositionToAddress(double latitude, double longitude, Accuracy position_accuracy, Accuracy &address_accuracy)
 {
     qDebug() << Q_FUNC_INFO << "Not implemented yeat";
     return QVariantMap();
+}
+
+void GeoClue1Service::onProviderUpdated()
+{
+    qDebug() << Q_FUNC_INFO;
+    if (!m_provider) {
+        qWarning() << "Without provider!!!";
+        return;
+    }
+
+    m_lastTimestamp = QDateTime::currentSecsSinceEpoch();
+    m_lastLatitude  = m_provider->latitude();
+    m_lastLongitude = m_provider->longitude();
+    m_lastAltitude  = m_provider->altitude();
+    m_lastAccuracy  = m_provider->accuracy();
+
+
+    qDebug() << m_lastTimestamp << m_lastLatitude << m_lastLongitude << m_lastAltitude << m_lastAccuracy.horizontal;
+
+    emit PositionChanged(
+        m_lastTimestamp,
+        m_lastLatitude,
+        m_lastLongitude,
+        m_lastAltitude,
+        m_lastAccuracy
+    );
 }
 
 

@@ -35,6 +35,11 @@ GPSProvider::~GPSProvider()
         ::close(m_fd);
 }
 
+void GPSProvider::setActive(bool active)
+{
+
+}
+
 void GPSProvider::requestLocationUpdate()
 {
     m_fd = ::open("/dev/ttyACM0", O_RDONLY | O_NONBLOCK);
@@ -66,6 +71,7 @@ void GPSProvider::readData()
 
             if (!line.isEmpty()) {
                 if (m_parser.parseNMEA(line)) {
+                    qDebug() << line;
                     double newLat = m_parser.latitude();
                     double newLon = m_parser.longitude();
                     double newAlt = m_parser.altitude();

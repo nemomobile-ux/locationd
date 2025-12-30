@@ -54,6 +54,11 @@ GeoIPProvider::GeoIPProvider(QObject* parent)
         SLOT(queryGeoIP()));
 }
 
+void GeoIPProvider::setActive(bool active)
+{
+
+}
+
 void GeoIPProvider::requestLocationUpdate()
 {
     queryGeoIP();

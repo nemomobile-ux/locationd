@@ -20,7 +20,8 @@ find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS
     Positioning)
 
 add_subdirectory(lib)
-add_subdirectory(src)
+add_subdirectory(daemon)
+add_subdirectory(master)
 add_subdirectory(plugins)
 
 configure_file(

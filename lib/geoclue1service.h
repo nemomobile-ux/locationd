@@ -20,14 +20,22 @@
 #ifndef GEOCLUE1SERVICE_H
 #define GEOCLUE1SERVICE_H
 
+#include "pluginmanager.h"
 #include "ilocationprovider.h"
 #include <QObject>
 
 class GeoClue1Service : public QObject {
     Q_OBJECT
 public:
-    explicit GeoClue1Service(ILocationProvider* provider, QObject* parent = nullptr);
-    int GetPosition(int& timestamp, double& latitude, double& longitude, double& altitude, Accuracy& accuracy);
+    enum class PositionState {
+        Stopped,
+        Running
+    };
+
+    explicit GeoClue1Service(QObject* parent = nullptr);
+
+public slots:
+    int GetPosition(int& timestamp, double& latitude, double& longitude, double& altitude, Accuracy& accuracy);    
     QVector<SatInfoFull> GetSatellites();
     int GetLastSatellite(int &satellite_used, int &satellite_visible, UsedPRN &used_prn, UsedSat &sat_info);
     int GetSatellite(int &satellite_used, int &satellite_visible, UsedPRN &used_prn, UsedSat &sat_info);
@@ -51,9 +59,33 @@ public:
 
     QVariantMap PositionToAddress(double latitude, double longitude, Accuracy position_accuracy, Accuracy &address_accuracy);
 
+private slots:
+    void onProviderUpdated();
+
+signals:
+    void PositionChanged(int timestamp,
+        double latitude,
+        double longitude,
+        double altitude,
+        Accuracy accuracy);
+    void PositionProviderChanged(QString name,
+        QString description,
+        QString service,
+        QString path);
+
 private:
+    PluginManager* m_pluginManager;
     ILocationProvider* m_provider;
     QList<QGeoSatelliteInfo> m_lastSatellites;
+    PositionState m_positionState;
+    int m_refCount;
+    int m_clientCount;
+
+    int m_lastTimestamp = 0;
+    double m_lastLatitude = 0.0;
+    double m_lastLongitude = 0.0;
+    double m_lastAltitude = 0.0;
+    Accuracy m_lastAccuracy;
 };
 
 #endif // GEOCLUE1SERVICE_H

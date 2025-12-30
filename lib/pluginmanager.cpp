@@ -25,7 +25,7 @@
 PluginManager::PluginManager(QObject* parent)
     : ILocationProvider(parent)
 {
-    connect(QDBusConnection::systemBus().interface(), &QDBusConnectionInterface::serviceOwnerChanged,
+    connect(QDBusConnection::sessionBus().interface(), &QDBusConnectionInterface::serviceOwnerChanged,
         this, &PluginManager::onNameOwnerChanged);
 }
 
@@ -63,6 +63,11 @@ void PluginManager::loadPlugins(const QString& path)
     }
 
     updateBestProvider();
+}
+
+void PluginManager::setActive(bool active)
+{
+
 }
 
 void PluginManager::updateBestProvider()

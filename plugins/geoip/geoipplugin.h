@@ -34,6 +34,7 @@ public:
     explicit GeoIPProvider(QObject* parent = nullptr);
     ~GeoIPProvider() override = default;
 
+    void setActive(bool active) override;
     bool isAvailable() const override { return true; }
     int priority() const override { return 10; }
 

@@ -42,6 +42,11 @@ WifiProvider::WifiProvider(QObject* parent)
 
 WifiProvider::~WifiProvider() { }
 
+void WifiProvider::setActive(bool active)
+{
+
+}
+
 void WifiProvider::requestLocationUpdate()
 {
     fetchWifiData();
