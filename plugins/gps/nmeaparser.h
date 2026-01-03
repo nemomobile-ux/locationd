@@ -33,14 +33,24 @@ public:
     double direction() const { return m_dir; }
 
     Accuracy accuracy() const { return m_accuracy; }
-    QVector<QGeoSatelliteInfo> satellites() const { return m_sats; }
+    QList<QGeoSatelliteInfo> satellitesInView() const { return m_satsInView; }
+    QList<QGeoSatelliteInfo> satellitesInUse() const { return m_satsInUse; }
 
 private:
     QGeoCoordinate m_coordinate;
     double m_speed = 0.0;
     double m_dir = 0.0;
     Accuracy m_accuracy;
-    QVector<QGeoSatelliteInfo> m_sats;
+    QList<QGeoSatelliteInfo> m_satsInView;
+    QList<QGeoSatelliteInfo> m_satsInUse;
+    QSet<int> m_usedPrns;
+
+    void parseGSV(const QStringList& parts);
+    void parseGSA(const QStringList& parts);
+    void updateSatUseFlags();
+
+    bool checkNMEAChecksum(const QByteArray& line);
+    QString sentenceType(const QString& header);
 };
 
 #endif // NMEA_PARSER_H

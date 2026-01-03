@@ -13,6 +13,8 @@ qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-geoclue-full.xml locationdaem
 qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-master-client-full.xml locationdaemonpositionresolver.h LocationDaemonPositionResolver masterclientdaptor)
 qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-address-full.xml locationdaemonpositionresolver.h LocationDaemonPositionResolver addressadaptor)
 qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-position-full.xml locationdaemonpositionresolver.h LocationDaemonPositionResolver positionadaptor)
+qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-satellite-full.xml locationdaemonpositionresolver.h LocationDaemonPositionResolver satelliteadaptor)
+
 
 #qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-geocode-full.xml geoclue1service.h GeoClue1Service geocodeadaptor)
 #qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-reverse-geocode-full.xml geoclue1service.h GeoClue1Service reversegeocodeadaptor)

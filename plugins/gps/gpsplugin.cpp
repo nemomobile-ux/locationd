@@ -73,22 +73,28 @@ void GPSProvider::readData()
                     double newSpeed = m_parser.speed();
                     double newDir = m_parser.direction();
                     Accuracy newAcc = m_parser.accuracy();
-                    QVector<QGeoSatelliteInfo> newSats = m_parser.satellites();
+                    QList<QGeoSatelliteInfo> newSats = m_parser.satellitesInView();
 
-                    bool changed = (newCoordinate != m_coordinate) || (newSpeed != m_speed) || (newDir != m_direction) || (newAcc.horizontal() != m_accuracy.horizontal()) || (newAcc.vertical() != m_accuracy.vertical()) || (newSats != m_satellites);
+                    bool changed = (newCoordinate != m_coordinate)
+                        || (newSpeed != m_speed)
+                        || (newDir != m_direction)
+                        || (newAcc.horizontal() != m_accuracy.horizontal())
+                        || (newAcc.vertical() != m_accuracy.vertical());
 
                     if (changed) {
                         m_coordinate = newCoordinate;
                         m_speed = newSpeed;
                         m_direction = newDir;
                         m_accuracy = newAcc;
-                        m_satellites = newSats;
 
                         qDebug() << "[ GPS ] Updated coordinates:" << m_coordinate
                                  << "Accuracy:" << m_accuracy.horizontal();
 
                         emit positionUpdated();
                     }
+
+                    m_satellites.satellitesView = m_parser.satellitesInView();
+                    m_satellites.satellitesUsed = m_parser.satellitesInUse();
                 }
             }
         }

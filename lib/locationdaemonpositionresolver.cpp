@@ -154,6 +154,27 @@ int LocationDaemonPositionResolver::GetAddress(QVariantMap& address, Accuracy& a
     return 1;
 }
 
+int LocationDaemonPositionResolver::GetLastSatellite(int &satellite_used, int &satellite_visible, QList<qint32> &used_prn, QList<QGeoSatelliteInfo> &sat_info)
+{
+    if(m_pluginManager->bestProvider()->satellites().satellitesView.count() < 1) {
+        return -1;
+    }
+
+    satellite_visible = m_pluginManager->bestProvider()->satellites().satellitesView.count();
+    satellite_used = m_pluginManager->bestProvider()->satellites().satellitesUsed.count();
+    sat_info = m_pluginManager->bestProvider()->satellites().satellitesView;
+
+    foreach (QGeoSatelliteInfo s, m_pluginManager->bestProvider()->satellites().satellitesUsed) {
+        used_prn.push_back(s.satelliteIdentifier());
+    }
+    return 1;
+}
+
+int LocationDaemonPositionResolver::GetSatellite(int &satellite_used, int &satellite_visible, QList<qint32> &used_prn, QList<QGeoSatelliteInfo> &sat_info)
+{
+    return GetLastSatellite(satellite_used, satellite_visible, used_prn, sat_info);
+}
+
 void LocationDaemonPositionResolver::onProviderPositionUpdated()
 {
     if (!m_pluginManager->bestProvider()) {
@@ -166,9 +187,26 @@ void LocationDaemonPositionResolver::onProviderPositionUpdated()
         m_lastCoord = coord;
         m_lastUpdate = m_pluginManager->bestProvider()->lastUpdate();
 
-        // TODO fix me!
+               // TODO fix me!
         int feelds = Latitude | Longitude | Altitude;
         emit PositionChanged(feelds, m_lastUpdate.currentSecsSinceEpoch(), coord.latitude(), coord.longitude(), coord.altitude(), m_lastAccuracy);
+    }
+
+           //TODO need check for update
+    if(m_pluginManager->bestProvider()->satellites().satellitesView.count() > 1) {
+
+        int satellite_visible = m_pluginManager->bestProvider()->satellites().satellitesView.count();
+        int satellite_used = m_pluginManager->bestProvider()->satellites().satellitesUsed.count();
+        QList<QGeoSatelliteInfo> sat_info = m_pluginManager->bestProvider()->satellites().satellitesView;
+        QList<qint32> used_prn;
+
+        foreach (QGeoSatelliteInfo s, m_pluginManager->bestProvider()->satellites().satellitesUsed) {
+            used_prn.push_back(s.satelliteIdentifier());
+        }
+
+        qDebug() << sat_info;
+
+        emit SatelliteChanged(m_lastUpdate.currentSecsSinceEpoch(), satellite_used, satellite_visible, used_prn, sat_info);
     }
 }
 

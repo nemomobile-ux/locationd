@@ -50,7 +50,7 @@ public:
 
     Accuracy accuracy() const override { return m_accuracy; }
 
-    QVector<QGeoSatelliteInfo> satellites() const override { return {}; }
+    SatellitesInfo satellites() const override { return SatellitesInfo(); }
     QDateTime lastUpdate() const override { return m_lastUpdate; }
 
 public slots:

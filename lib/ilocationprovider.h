@@ -31,6 +31,12 @@
 class ILocationProvider : public QObject {
     Q_OBJECT
 public:
+    struct SatellitesInfo
+    {
+        QList<QGeoSatelliteInfo> satellitesUsed = QList<QGeoSatelliteInfo>();
+        QList<QGeoSatelliteInfo> satellitesView = QList<QGeoSatelliteInfo>();
+    };
+
     explicit ILocationProvider(QObject* parent = nullptr)
         : QObject(parent)
     {
@@ -51,7 +57,7 @@ public:
 
     virtual QDateTime lastUpdate() const = 0;
 
-    virtual QVector<QGeoSatelliteInfo> satellites() const = 0;
+    virtual SatellitesInfo satellites() const = 0;
 
 public slots:
     virtual void requestLocationUpdate() { }

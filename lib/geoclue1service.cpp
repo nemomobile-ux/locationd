@@ -54,7 +54,6 @@ QVector<QGeoSatelliteInfo> GeoClue1Service::GetSatellites()
 {
     if (!m_provider)
         return {};
-    return m_provider->satellites();
 }
 
 int GeoClue1Service::GetLastSatellite()

@@ -22,6 +22,7 @@
 #include "geoclueadaptor.h"
 #include "masterclientdaptor.h"
 #include "positionadaptor.h"
+#include "satelliteadaptor.h"
 
 LocationDaemonClientResolver::LocationDaemonClientResolver(QObject* parent)
     : QObject { parent }
@@ -39,6 +40,7 @@ QDBusObjectPath LocationDaemonClientResolver::Create()
     MasterClientAdaptor* masterClient = new MasterClientAdaptor(resolver);
     PositionAdaptor* positon = new PositionAdaptor(resolver);
     AddressAdaptor* address = new AddressAdaptor(resolver);
+    SatelliteAdaptor* satelittes = new SatelliteAdaptor(resolver);
 
     QDBusConnection bus = QDBusConnection::sessionBus();
     QString path = QString("/org/freedesktop/Geoclue/Master/client%1").arg(++m_clientCount);

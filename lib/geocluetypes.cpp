@@ -45,6 +45,8 @@ struct AccuracyInitializer {
     AccuracyInitializer()
     {
         qDBusRegisterMetaType<Accuracy>();
+        qDBusRegisterMetaType<QGeoSatelliteInfo>();
+        qDBusRegisterMetaType<QList<QGeoSatelliteInfo>>();
     }
 };
 
@@ -114,3 +116,23 @@ const QDBusArgument& operator>>(const QDBusArgument& argument, QList<QGeoSatelli
 }
 
 QT_END_NAMESPACE
+
+const QDBusArgument &operator<<(QDBusArgument &arg, const QGeoSatelliteInfo &si)
+{
+    arg.beginStructure();
+    arg << si.satelliteIdentifier()
+        << si.attribute(QGeoSatelliteInfo::Azimuth)
+        << si.attribute(QGeoSatelliteInfo::Elevation)
+        << si.signalStrength();
+    arg.endStructure();
+    return arg;
+}
+
+const QDBusArgument &operator<<(QDBusArgument &arg, const QList<QGeoSatelliteInfo> &list)
+{
+    arg.beginArray(qMetaTypeId<QGeoSatelliteInfo>());
+    for (const auto& si : list)
+        arg << si;
+    arg.endArray();
+    return arg;
+}

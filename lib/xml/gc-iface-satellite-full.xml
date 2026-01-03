@@ -8,8 +8,8 @@
 			<arg type="i" name="satellite_visible" direction="out" />
 			<arg type="ai" name="used_prn" direction="out" />
 			<arg type="a(iiii)" name="sat_info" direction="out" />
-                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out3" value="UsedPRN"/>
-                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out4" value="UsedSat"/>
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out3" value="QList&lt;qint32&gt;"/>
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out4" value="QList&lt;QGeoSatelliteInfo&gt;"/>
 		</method>
 
 		<method name="GetLastSatellite">
@@ -18,8 +18,8 @@
 			<arg type="i" name="satellite_visible" direction="out" />
 			<arg type="ai" name="used_prn" direction="out" />
 			<arg type="a(iiii)" name="sat_info" direction="out" />
-                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out3" value="UsedPRN"/>
-                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out4" value="UsedSat"/>
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out3" value="QList&lt;qint32&gt;"/>
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out4" value="QList&lt;QGeoSatelliteInfo&gt;"/>
 		</method>
 
 		<signal name="SatelliteChanged">
@@ -28,8 +28,8 @@
 			<arg type="i" name="satellite_visible" />
 			<arg type="ai" name="used_prn" />
 			<arg type="a(iiii)" name="sat_info" />
-                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out3" value="UsedPRN"/>
-                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out4" value="UsedSat"/>
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out3" value="QList&lt;qint32&gt;"/>
+                        <annotation name="org.qtproject.QtDBus.QtTypeName.Out4" value="QList&lt;QGeoSatelliteInfo&gt;"/>
 		</signal>
 	</interface>
 </node>

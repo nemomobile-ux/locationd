@@ -64,14 +64,19 @@ public slots:
     // org.freedesktop.Geoclue.Address
     int GetAddress(QVariantMap& address, Accuracy& accuracy);
 
+    // org.freedesktop.Geoclue.Satellite
+    int GetLastSatellite(int &satellite_used, int &satellite_visible, QList<qint32> &used_prn, QList<QGeoSatelliteInfo> &sat_info);
+    int GetSatellite(int &satellite_used, int &satellite_visible, QList<qint32> &used_prn, QList<QGeoSatelliteInfo> &sat_info);
+
 private slots:
     void onProviderPositionUpdated();
     void onBestProviderChanged();
 
 Q_SIGNALS:
     void PositionProviderChanged(const QString& name, const QString& description, const QString& service, const QString& path);
-
     void PositionChanged(int fields, int timestamp, double latitude, double longitude, double altitude, Accuracy accuracy);
+
+    void SatelliteChanged(int timestamp, int satellite_used, int satellite_visible, const QList<qint32> used_prn, const QList<QGeoSatelliteInfo> sat_info);
 
 private:
     int m_refCount;

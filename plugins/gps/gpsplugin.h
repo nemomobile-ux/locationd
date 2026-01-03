@@ -45,7 +45,7 @@ public:
     double direction() const override { return m_direction; }
 
     Accuracy accuracy() const override { return m_accuracy; }
-    QVector<QGeoSatelliteInfo> satellites() const override { return m_satellites; }
+    SatellitesInfo satellites() const override { return m_satellites; }
     QDateTime lastUpdate() const override { return m_lastUpdate; }
 
 public slots:
@@ -62,7 +62,7 @@ private:
     double m_speed = 0.0;
     double m_direction = 0.0;
     Accuracy m_accuracy;
-    QVector<QGeoSatelliteInfo> m_satellites;
+    SatellitesInfo m_satellites;
     QDateTime m_lastUpdate;
 
     NMEAParser m_parser;

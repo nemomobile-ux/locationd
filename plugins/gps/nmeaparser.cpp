@@ -26,75 +26,170 @@ bool NMEAParser::parseNMEA(const QByteArray& line)
     if (line.isEmpty() || line[0] != '$')
         return false;
 
-    QString str(line);
-    str = str.trimmed();
-    QStringList parts = str.split(',');
+    if (!checkNMEAChecksum(line))
+        return false;
 
+    QString str = QString::fromLatin1(line).trimmed();
+    int asterisk = str.indexOf('*');
+    if (asterisk > 0)
+        str = str.left(asterisk);
+
+    QStringList parts = str.split(',');
     if (parts.isEmpty())
         return false;
 
-    QString type = parts[0];
-    if (type == "$GPRMC") {
-        if (parts.size() < 10)
+    QString type = sentenceType(parts[0]);
+
+    if (type == "GSV") {
+        parseGSV(parts);
+        return true;
+    }
+
+    if (type == "GSA") {
+        parseGSA(parts);
+        return true;
+    }
+
+    /* ======================= RMC ======================= */
+    if (type == "RMC") {
+        if (parts.size() < 9 || parts[2] != "A")
             return false;
 
-        if (parts[2] != "A") // Validity
+        if (parts[3].isEmpty() || parts[5].isEmpty())
             return false;
 
-        // Latitude
+               // Latitude
         double latDeg = parts[3].left(2).toDouble();
         double latMin = parts[3].mid(2).toDouble();
-        m_coordinate.setLatitude(latDeg + latMin / 60.0);
+        double lat = latDeg + latMin / 60.0;
         if (parts[4] == "S")
-            m_coordinate.setLatitude(-m_coordinate.altitude());
+            lat = -lat;
+        m_coordinate.setLatitude(lat);
 
-        // Longitude
+               // Longitude
         double lonDeg = parts[5].left(3).toDouble();
         double lonMin = parts[5].mid(3).toDouble();
-        m_coordinate.setLongitude(lonDeg + lonMin / 60.0);
+        double lon = lonDeg + lonMin / 60.0;
         if (parts[6] == "W")
-            m_coordinate.setLongitude(-m_coordinate.longitude());
+            lon = -lon;
+        m_coordinate.setLongitude(lon);
 
-        // Speed and course
-        m_speed = parts[7].toDouble() * 0.514444; // knots -> m/s
-        m_dir = parts[8].toDouble();
+        m_speed = parts[7].toDouble() * 0.514444; // knots → m/s
+        m_dir   = parts[8].toDouble();
 
         m_accuracy.setLevel(Accuracy::Level::Detailed);
-        m_accuracy.setHorizontal(5.0);
-        m_accuracy.setVertical(10.0);
+        return true;
+    }
+
+    /* ======================= GGA ======================= */
+    if (type == "GGA") {
+        if (parts.size() >= 10 && !parts[9].isEmpty())
+            m_coordinate.setAltitude(parts[9].toDouble());
 
         return true;
-    } else if (type == "$GPGGA") {
-        if (parts.size() < 10)
-            return false;
+    }
 
-        m_coordinate.setAltitude(parts[9].toDouble()); // Altitude in meters
-
-        return true;
-    } else if (type == "$GPGSV") {
-        // Satellites in view
-        // FORMAT: $GPGSV,total_msgs,msg_num,num_sv,PRN1,ele1,az1,SNR1,...*hh
-        int num_sv = parts[3].toInt();
-
-        int startIndex = 4;
-        for (int i = 0; i < num_sv; ++i) {
-            if (startIndex + 3 >= parts.size())
-                break;
-
-            QGeoSatelliteInfo sat;
-            // FIX ME!
-            /*sat.prn = parts[startIndex].toInt();
-            sat.elevation = parts[startIndex + 1].toInt();
-            sat.azimuth = parts[startIndex + 2].toInt();
-            sat.snr = parts[startIndex + 3].toInt();
-            sat.used = (sat.snr > 0);*/
-
-            m_sats.append(sat);
-
-            startIndex += 4;
-        }
+    /* ======================= GSV ======================= */
+    if (type == "GSV") {
+        parseGSV(parts);
         return true;
     }
 
     return false;
+}
+
+bool NMEAParser::checkNMEAChecksum(const QByteArray &line)
+{
+    int asterisk = line.indexOf('*');
+    if (asterisk < 0)
+        return false;
+
+    QByteArray data = line.mid(1, asterisk - 1);
+    QByteArray checksumStr = line.mid(asterisk + 1, 2);
+
+    bool ok = false;
+    int expected = checksumStr.toInt(&ok, 16);
+    if (!ok)
+        return false;
+
+    quint8 crc = 0;
+    for (char c : data)
+        crc ^= static_cast<quint8>(c);
+
+    return crc == expected;
+}
+
+void NMEAParser::parseGSV(const QStringList& parts)
+{
+    if (parts.size() < 4)
+        return;
+
+    int msgNum = parts[2].toInt();
+
+    if (msgNum == 1)
+        m_satsInView.clear();
+
+    int satsInMsg = (parts.size() - 4) / 4;
+    int index = 4;
+
+    for (int i = 0; i < satsInMsg; ++i) {
+        if (index + 3 >= parts.size())
+            break;
+
+        if (parts[index].isEmpty())
+            break;
+
+        QGeoSatelliteInfo sat;
+        int prn = parts[index].toInt();
+        sat.setSatelliteIdentifier(prn);
+
+        sat.setAttribute(QGeoSatelliteInfo::Elevation,
+            parts[index + 1].toInt());
+        sat.setAttribute(QGeoSatelliteInfo::Azimuth,
+            parts[index + 2].toInt());
+
+        if (!parts[index + 3].isEmpty()) {
+            sat.setSignalStrength(parts[index + 3].toInt());
+        }
+
+        m_satsInView.append(sat);
+        index += 4;
+    }
+
+    updateSatUseFlags();
+}
+
+void NMEAParser::parseGSA(const QStringList &parts)
+{
+    if (parts.size() < 15)
+        return;
+
+    m_usedPrns.clear();
+
+    for (int i = 3; i <= 14 && i < parts.size(); ++i) {
+        if (!parts[i].isEmpty())
+            m_usedPrns.insert(parts[i].toInt());
+    }
+
+    updateSatUseFlags();
+}
+
+void NMEAParser::updateSatUseFlags()
+{
+    m_satsInUse.clear();
+
+    for (QGeoSatelliteInfo sat : std::as_const(m_satsInView)) {
+        int prn = sat.satelliteIdentifier();
+        if (m_usedPrns.contains(prn))
+            m_satsInUse.append(sat);
+    }
+}
+
+
+QString NMEAParser::sentenceType(const QString &header)
+{
+    // "$GPGSV" → "GSV"
+    if (header.length() >= 6 && header.startsWith('$'))
+        return header.mid(3, 3);
+    return QString();
 }
