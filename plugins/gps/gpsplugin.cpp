@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2025-2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,6 +27,11 @@
 GPSProvider::GPSProvider(QObject* parent)
     : ILocationProvider(parent)
 {
+    m_fd = ::open("/dev/ttyACM0", O_RDONLY | O_NONBLOCK);
+    if (m_fd < 0) {
+        qWarning() << "GPSProvider: cannot open /dev/ttyACM0";
+        return;
+    }
 }
 
 GPSProvider::~GPSProvider()
@@ -37,17 +42,10 @@ GPSProvider::~GPSProvider()
 
 void GPSProvider::setActive(bool active)
 {
-
 }
 
 void GPSProvider::requestLocationUpdate()
 {
-    m_fd = ::open("/dev/ttyACM0", O_RDONLY | O_NONBLOCK);
-    if (m_fd < 0) {
-        qWarning() << "GPSProvider: cannot open /dev/ttyACM0";
-        return;
-    }
-
     readData();
 }
 
@@ -71,31 +69,25 @@ void GPSProvider::readData()
 
             if (!line.isEmpty()) {
                 if (m_parser.parseNMEA(line)) {
-                    qDebug() << line;
-                    double newLat = m_parser.latitude();
-                    double newLon = m_parser.longitude();
-                    double newAlt = m_parser.altitude();
+                    QGeoCoordinate newCoordinate = m_parser.coordinate();
                     double newSpeed = m_parser.speed();
                     double newDir = m_parser.direction();
                     Accuracy newAcc = m_parser.accuracy();
-                    QVector<SatInfoFull> newSats = m_parser.satellites();
+                    QVector<QGeoSatelliteInfo> newSats = m_parser.satellites();
 
-                    bool changed = (newLat != m_latitude) || (newLon != m_longitude) || (newAlt != m_altitude) || (newSpeed != m_speed) || (newDir != m_direction) || (newAcc.horizontal != m_accuracy.horizontal) || (newAcc.vertical != m_accuracy.vertical) || (newSats != m_satellites);
+                    bool changed = (newCoordinate != m_coordinate) || (newSpeed != m_speed) || (newDir != m_direction) || (newAcc.horizontal() != m_accuracy.horizontal()) || (newAcc.vertical() != m_accuracy.vertical()) || (newSats != m_satellites);
 
                     if (changed) {
-                        m_latitude = newLat;
-                        m_longitude = newLon;
-                        m_altitude = newAlt;
+                        m_coordinate = newCoordinate;
                         m_speed = newSpeed;
                         m_direction = newDir;
                         m_accuracy = newAcc;
                         m_satellites = newSats;
 
-                        qDebug() << "[ GPS ] Updated Lat:" << m_latitude
-                                 << "Lon:" << m_longitude
-                                 << "Accuracy:" << m_accuracy.horizontal;
+                        qDebug() << "[ GPS ] Updated coordinates:" << m_coordinate
+                                 << "Accuracy:" << m_accuracy.horizontal();
 
-                        emit updated();
+                        emit positionUpdated();
                     }
                 }
             }

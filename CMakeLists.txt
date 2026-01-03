@@ -23,15 +23,3 @@ add_subdirectory(lib)
 add_subdirectory(daemon)
 add_subdirectory(master)
 add_subdirectory(plugins)
-
-configure_file(
-    ${CMAKE_SOURCE_DIR}/data/locationd.service.in
-    ${CMAKE_BINARY_DIR}/locationd.service
-    @ONLY
-)
-
-install(FILES ${CMAKE_BINARY_DIR}/locationd.service
-        DESTINATION /usr/lib/systemd/system)
-
-install(FILES data/org.freedesktop.Geoclue.conf
-        DESTINATION /etc/dbus-1/system.d)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2025-2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -41,7 +41,6 @@ CellProvider::~CellProvider()
 
 void CellProvider::setActive(bool active)
 {
-
 }
 
 void CellProvider::requestLocationUpdate()
@@ -149,15 +148,21 @@ void CellProvider::queryMLS()
 
 void CellProvider::handleMLSResponse(double lat, double lon, int accuracy)
 {
-    m_latitude = lat;
-    m_longitude = lon;
-    m_altitude = 0.0;
+    QGeoCoordinate coordinate;
+    coordinate.setLatitude(lat);
+    coordinate.setLongitude(lon);
+    coordinate.setAltitude(0);
 
-    m_accuracy.level = static_cast<int>(AccuracyLevel::STREET);
-    m_accuracy.horizontal = accuracy;
+    if (coordinate.isValid() && coordinate != m_coordinate) {
+        m_coordinate = coordinate;
+        emit positionUpdated();
+        m_lastUpdate = QDateTime::currentDateTime();
+    }
+
+    m_accuracy.setLevel(Accuracy::Level::Street);
+    m_accuracy.setHorizontal(accuracy);
 
     m_available = true;
 
-    emit updated();
     qInfo() << "[CellProvider] Location updated via MLS:" << lat << lon << "accuracy:" << accuracy;
 }

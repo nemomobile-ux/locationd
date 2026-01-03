@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2025-2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -43,20 +43,18 @@ GeoIPProvider::GeoIPProvider(QObject* parent)
         bus);
     if (!connmanManager.isValid()) {
         qWarning() << "GeoIPProvider: ConnMan Manager interface not available";
-        return;
+    } else {
+        bus.connect("net.connman",
+            "/",
+            "net.connman.Manager",
+            "PropertyChanged",
+            this,
+            SLOT(queryGeoIP()));
     }
-
-    bus.connect("net.connman",
-        "/",
-        "net.connman.Manager",
-        "PropertyChanged",
-        this,
-        SLOT(queryGeoIP()));
 }
 
 void GeoIPProvider::setActive(bool active)
 {
-
 }
 
 void GeoIPProvider::requestLocationUpdate()
@@ -81,21 +79,22 @@ void GeoIPProvider::parseGeoIPJson()
         QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
-
-            m_latitude = obj["lat"].toDouble();
-            m_longitude = obj["lon"].toDouble();
-            m_altitude = 0.0;
+            m_coordinate.setLatitude(obj["lat"].toDouble());
+            m_coordinate.setLongitude(obj["lon"].toDouble());
+            m_coordinate.setAltitude(0.0);
             m_speed = 0.0;
             m_direction = 0.0;
+            m_lastUpdate = QDateTime::currentDateTime();
 
-            m_accuracy.level = static_cast<int>(AccuracyLevel::CITY);
-            m_accuracy.horizontal = 50000.0;
-            m_accuracy.vertical = 0.0;
+            Accuracy accuracy;
 
-            emit updated();
-            qDebug() << "[GeoIP] Updated Lat:" << m_latitude
-                     << "Lon:" << m_longitude
-                     << "Accuracy:" << m_accuracy.horizontal << "m";
+            accuracy.setLevel(Accuracy::Level::PostalCode);
+            m_accuracy.setHorizontal(50000.0);
+            m_accuracy.setVertical(0.0);
+
+            emit positionUpdated();
+            qDebug() << "[GeoIP] Coordinate:" << m_coordinate
+                     << "Accuracy:" << m_accuracy.horizontal() << "m";
         }
     } else {
         qWarning() << "GeoIPProvider error:" << reply->errorString();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2025-2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -18,12 +18,14 @@
  */
 
 #include "pluginmanager.h"
+#include <QDBusConnection>
+#include <QDBusConnectionInterface>
 #include <QDebug>
 #include <QDir>
 #include <QPluginLoader>
 
 PluginManager::PluginManager(QObject* parent)
-    : ILocationProvider(parent)
+    : QObject(parent)
 {
     connect(QDBusConnection::sessionBus().interface(), &QDBusConnectionInterface::serviceOwnerChanged,
         this, &PluginManager::onNameOwnerChanged);
@@ -54,44 +56,68 @@ void PluginManager::loadPlugins(const QString& path)
             continue;
         }
 
-        provider->requestLocationUpdate();
-
         qInfo() << "Loaded provider:" << provider->metaObject()->className();
-        connect(provider, &ILocationProvider::updated, this, &PluginManager::updateBestProvider);
+        connect(provider, &ILocationProvider::positionUpdated, this, &PluginManager::getProviderPosition);
 
         m_providers.append(provider);
     }
-
-    updateBestProvider();
 }
 
 void PluginManager::setActive(bool active)
 {
-
+    m_active = active;
+    if (active) {
+        foreach (ILocationProvider* p, m_providers) {
+            p->setActive(true);
+        }
+        getProviderPosition();
+    }
 }
 
-void PluginManager::updateBestProvider()
+void PluginManager::getProviderPosition()
 {
     ILocationProvider* best = nullptr;
 
     for (ILocationProvider* p : m_providers) {
-        if (!p->isAvailable())
+        if (!p->isAvailable()) {
+            qDebug() << p->metaObject()->className() << "is not available";
             continue;
-        if (!best || p->priority() > best->priority() || (p->priority() == best->priority() && p->accuracyValue() < best->accuracyValue())) {
+        }
+        if (!best) {
+            best = p;
+        } else if (p->priority() > best->priority()
+            || (p->priority() == best->priority()
+                && p->accuracy().horizontal() < best->accuracy().horizontal())) {
             best = p;
         }
+    }
+
+    if (!best) {
+        qWarning() << "WITHOUT PROVIDERS!";
+        return;
     }
 
     if (best != m_bestProvider) {
         m_bestProvider = best;
         emit bestProviderChanged();
-        emit updated();
+    }
+
+    if (m_bestProvider->coordinate() != m_lastCoord) {
+        m_lastCoord = m_bestProvider->coordinate();
+        emit providerPositionUpdated();
     }
 }
 
 void PluginManager::onNameOwnerChanged(const QString& name, const QString& oldOwner, const QString& newOwner)
 {
     Q_UNUSED(oldOwner);
+    if (newOwner.isEmpty()) {
+        return;
+    }
+
+    uint pid = QDBusConnection::sessionBus().interface()->servicePid(newOwner);
+    QString link = QString("/proc/%1/exe").arg(pid);
+    qDebug() << "Connecting:" << QFileInfo(link).symLinkTarget();
 
     if (name.startsWith(":")) {
         if (!newOwner.isEmpty()) {
@@ -112,9 +138,6 @@ void PluginManager::activateProviders()
 
     qInfo() << "Activating providers";
     m_active = true;
-
-    for (auto* p : m_providers)
-        p->requestLocationUpdate();
 }
 
 void PluginManager::deactivateProviders()

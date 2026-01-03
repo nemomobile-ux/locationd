@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2025-2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,13 +22,8 @@
 #include <QDBusError>
 #include <QDebug>
 
-#include "geoclue1service.h"
-#include "geoclueadaptor.h"
+#include "locationdaemonclientresolver.h"
 #include "masteradaptor.h"
-#include "masterclientdaptor.h"
-#include "positionadaptor.h"
-#include "satelliteadaptor.h"
-#include "velocityadaptor.h"
 
 int main(int argc, char* argv[])
 {
@@ -48,22 +43,16 @@ int main(int argc, char* argv[])
     }
 
     // Master service
-    GeoClue1Service masterService;
-    MasterAdaptor masterAdaptor(&masterService);
+    LocationDaemonClientResolver* clientService = new LocationDaemonClientResolver();
+    MasterAdaptor masterAdaptor(clientService);
 
     if (!bus.registerObject(
             QStringLiteral("/org/freedesktop/Geoclue/Master"),
-            &masterService,
+            clientService,
             QDBusConnection::ExportAdaptors)) {
         qCritical() << "Failed to register Master object:" << bus.lastError().message();
         return 1;
     }
-
-    GeoclueAdaptor geoclueAdaptor(&masterService);
-    PositionAdaptor positionAdaptor(&masterService);
-    SatelliteAdaptor satelliteAdaptor(&masterService);
-    VelocityAdaptor velocityAdaptor(&masterService);
-    MasterClientAdaptor masteclientAdaptor(&masterService);
 
     qInfo() << "GeoClue Master service started";
 

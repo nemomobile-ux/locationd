@@ -7,33 +7,34 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core DBus Network Positioning)
 
-set_source_files_properties("addressadaptor.h"
-    INCLUDE "accuracy.h")
+qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-master-full.xml locationdaemonclientresolver.h LocationDaemonClientResolver masteradaptor)
 
-qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-address-full.xml geoclue1service.h GeoClue1Service addressadaptor)
-qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-geoclue-full.xml geoclue1service.h GeoClue1Service geoclueadaptor)
-qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-geocode-full.xml geoclue1service.h GeoClue1Service geocodeadaptor)
-qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-master-client-full.xml geoclue1service.h GeoClue1Service masterclientdaptor)
-qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-master-full.xml geoclue1service.h GeoClue1Service masteradaptor)
-qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-position-full.xml geoclue1service.h GeoClue1Service positionadaptor)
-qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-reverse-geocode-full.xml geoclue1service.h GeoClue1Service reversegeocodeadaptor)
-qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-satellite-full.xml geoclue1service.h GeoClue1Service satelliteadaptor)
-qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-velocity-full.xml geoclue1service.h GeoClue1Service velocityadaptor)
+qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-geoclue-full.xml locationdaemonpositionresolver.h LocationDaemonPositionResolver geoclueadaptor)
+qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-master-client-full.xml locationdaemonpositionresolver.h LocationDaemonPositionResolver masterclientdaptor)
+qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-address-full.xml locationdaemonpositionresolver.h LocationDaemonPositionResolver addressadaptor)
+qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-position-full.xml locationdaemonpositionresolver.h LocationDaemonPositionResolver positionadaptor)
+
+#qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-geocode-full.xml geoclue1service.h GeoClue1Service geocodeadaptor)
+#qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-reverse-geocode-full.xml geoclue1service.h GeoClue1Service reversegeocodeadaptor)
+#qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-satellite-full.xml geoclue1service.h GeoClue1Service satelliteadaptor)
+#qt_add_dbus_adaptor(GENERATED_SOURCES xml/gc-iface-velocity-full.xml geoclue1service.h GeoClue1Service velocityadaptor)
 
 
 set(SRCS
     pluginmanager.cpp
-    accuracy.cpp
-    satinfofull.cpp
+    geocluetypes.cpp
     geoclue1service.cpp
+    locationdaemonclientresolver.cpp
+    locationdaemonpositionresolver.cpp
 )
 
 set(HEADERS
     pluginmanager.h
     ilocationprovider.h
-    accuracy.h
-    satinfofull.h
     geoclue1service.h
+    geocluetypes.h
+    locationdaemonclientresolver.h
+    locationdaemonpositionresolver.h
 )
 
 add_library(location SHARED

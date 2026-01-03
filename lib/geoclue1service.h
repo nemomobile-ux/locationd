@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2025-2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,8 +20,8 @@
 #ifndef GEOCLUE1SERVICE_H
 #define GEOCLUE1SERVICE_H
 
-#include "pluginmanager.h"
 #include "ilocationprovider.h"
+#include "pluginmanager.h"
 #include <QObject>
 
 class GeoClue1Service : public QObject {
@@ -35,10 +35,10 @@ public:
     explicit GeoClue1Service(QObject* parent = nullptr);
 
 public slots:
-    int GetPosition(int& timestamp, double& latitude, double& longitude, double& altitude, Accuracy& accuracy);    
-    QVector<SatInfoFull> GetSatellites();
-    int GetLastSatellite(int &satellite_used, int &satellite_visible, UsedPRN &used_prn, UsedSat &sat_info);
-    int GetSatellite(int &satellite_used, int &satellite_visible, UsedPRN &used_prn, UsedSat &sat_info);
+    int GetPosition(int& timestamp, double& latitude, double& longitude, double& altitude, Accuracy& accuracy);
+    QVector<QGeoSatelliteInfo> GetSatellites();
+    int GetLastSatellite();
+    int GetSatellite();
 
     int GetVelocity(int& timestamp, double& speed, double& direction, double& climb);
     int GetAddress(QVariantMap& address, Accuracy& accuracy);
@@ -46,28 +46,24 @@ public slots:
     QString GetProviderInfo(QString& Description);
     int GetStatus();
     void RemoveReference();
-    void SetOptions(const QVariantMap &options);
-    int AddressToPosition(const QVariantMap &address, double &latitude, double &longitude, double &altitude, Accuracy &accuracy);
-    int FreeformAddressToPosition(const QString &address, double &latitude, double &longitude, double &altitude, Accuracy &accuracy);
+    void SetOptions(const QVariantMap& options);
+    int AddressToPosition(const QVariantMap& address, double& latitude, double& longitude, double& altitude, Accuracy& accuracy);
+    int FreeformAddressToPosition(const QString& address, double& latitude, double& longitude, double& altitude, Accuracy& accuracy);
     QDBusObjectPath Create();
 
     void AddressStart();
-    QString GetAddressProvider(QString &description, QString &service, QString &path);
-    QString GetPositionProvider(QString &description, QString &service, QString &path);
+    QString GetAddressProvider(QString& description, QString& service, QString& path);
+    QString GetPositionProvider(QString& description, QString& service, QString& path);
     void PositionStart();
     void SetRequirements(int accuracy_level, int time, bool require_updates, int allowed_resources);
 
-    QVariantMap PositionToAddress(double latitude, double longitude, Accuracy position_accuracy, Accuracy &address_accuracy);
+    QVariantMap PositionToAddress(double latitude, double longitude, Accuracy position_accuracy, Accuracy& address_accuracy);
 
 private slots:
     void onProviderUpdated();
 
 signals:
-    void PositionChanged(int timestamp,
-        double latitude,
-        double longitude,
-        double altitude,
-        Accuracy accuracy);
+    void PositionChanged(int fields, int timestamp, double latitude, double longitude, double altitude, Accuracy accuracy);
     void PositionProviderChanged(QString name,
         QString description,
         QString service,

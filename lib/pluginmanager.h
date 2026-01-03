@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2025-2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,42 +24,27 @@
 #include <QList>
 #include <QObject>
 
-class PluginManager : public ILocationProvider {
+class PluginManager : public QObject {
     Q_OBJECT
 public:
     explicit PluginManager(QObject* parent = nullptr);
-
     void loadPlugins(const QString& path);
-
     ILocationProvider* bestProvider() const { return m_bestProvider; }
-
-    void setActive(bool active) override;
-    bool isAvailable() const override { return m_bestProvider && m_bestProvider->isAvailable(); }
-    int priority() const override { return m_bestProvider ? m_bestProvider->priority() : 0; }
-
-    double latitude() const override { return m_bestProvider ? m_bestProvider->latitude() : 0.0; }
-    double longitude() const override { return m_bestProvider ? m_bestProvider->longitude() : 0.0; }
-    double altitude() const override { return m_bestProvider ? m_bestProvider->altitude() : 0.0; }
-
-    double speed() const override { return m_bestProvider ? m_bestProvider->speed() : 0.0; }
-    double direction() const override { return m_bestProvider ? m_bestProvider->direction() : 0.0; }
-
-    Accuracy accuracy() const override { return m_bestProvider ? m_bestProvider->accuracy() : Accuracy { static_cast<int>(AccuracyLevel::NONE), 0.0, 0.0 }; }
-    double accuracyValue() const override { return m_bestProvider ? m_bestProvider->accuracyValue() : 0.0; }
-
-    QVector<SatInfoFull> satellites() const override { return m_bestProvider ? m_bestProvider->satellites() : QVector<SatInfoFull>(); }
+    void setActive(bool active);
 
 signals:
     void bestProviderChanged();
-    void updated();
+    void providerPositionUpdated();
 
 private slots:
-    void updateBestProvider();
     void onNameOwnerChanged(const QString& name, const QString& oldOwner, const QString& newOwner);
+    void getProviderPosition();
 
 private:
     QList<ILocationProvider*> m_providers;
     ILocationProvider* m_bestProvider = nullptr;
+
+    QGeoCoordinate m_lastCoord;
 
     QSet<QString> m_clients;
     bool m_active = false;

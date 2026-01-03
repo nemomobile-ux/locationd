@@ -12,6 +12,7 @@ Item{
         updateInterval: 10
 
         Component.onCompleted: {
+            positionSource.start()
             console.log("Latitude"+" : "+positionSource.position.coordinate.latitude)
             console.log("Longitude"+" : "+positionSource.position.coordinate.longitude)
         }

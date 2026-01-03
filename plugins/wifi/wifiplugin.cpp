@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2025-2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -35,23 +35,19 @@
 WifiProvider::WifiProvider(QObject* parent)
     : ILocationProvider(parent)
 {
-    m_updateTimer.setSingleShot(true);
-    m_updateTimer.setInterval(30000);
-    connect(&m_updateTimer, &QTimer::timeout, this, &WifiProvider::queryMLS);
 }
 
-WifiProvider::~WifiProvider() { }
+WifiProvider::~WifiProvider()
+{
+}
 
 void WifiProvider::setActive(bool active)
 {
-
 }
 
 void WifiProvider::requestLocationUpdate()
 {
     fetchWifiData();
-    if (!m_accessPoints.isEmpty())
-        m_updateTimer.start();
 }
 
 void WifiProvider::fetchWifiData()
@@ -128,22 +124,19 @@ void WifiProvider::queryMLS()
                 double lat = loc["lat"].toDouble();
                 double lon = loc["lng"].toDouble();
                 int acc = obj["accuracy"].toInt();
-                handleMLSResponse(lat, lon, acc);
+                QGeoCoordinate coordinate;
+                coordinate.setAltitude(0);
+                coordinate.setLatitude(lat);
+                coordinate.setLongitude(lon);
+                if (coordinate != m_coordinate) {
+                    m_coordinate = coordinate;
+                    m_accuracy.setHorizontal(acc);
+                    emit positionUpdated();
+                    m_lastUpdate = QDateTime::currentDateTime();
+                }
             }
         }
         reply->deleteLater();
         reply->manager()->deleteLater();
     });
-}
-
-void WifiProvider::handleMLSResponse(double lat, double lon, int accuracy)
-{
-    m_latitude = lat;
-    m_longitude = lon;
-    m_altitude = 0.0;
-    m_accuracy.horizontal = accuracy;
-    m_available = true;
-
-    emit updated();
-    qInfo() << "[WifiProvider] Location updated via Wi-Fi MLS:" << lat << lon << "accuracy:" << accuracy;
 }

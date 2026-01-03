@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2025-2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -38,17 +38,15 @@ public:
     bool isAvailable() const override { return true; }
     int priority() const override { return 10; }
 
-    double latitude() const override { return m_latitude; }
-    double longitude() const override { return m_longitude; }
-    double altitude() const override { return m_altitude; }
+    QGeoCoordinate coordinate() const override { return m_coordinate; }
 
     double speed() const override { return m_speed; }
     double direction() const override { return m_direction; }
 
     Accuracy accuracy() const override { return m_accuracy; }
-    double accuracyValue() const override { return m_accuracy.horizontal; }
 
-    QVector<SatInfoFull> satellites() const override { return QVector<SatInfoFull>(); }
+    QVector<QGeoSatelliteInfo> satellites() const override { return QVector<QGeoSatelliteInfo>(); }
+    QDateTime lastUpdate() const override { return m_lastUpdate; }
 
 public slots:
     void requestLocationUpdate() override;
@@ -60,12 +58,12 @@ private slots:
 private:
     QNetworkAccessManager* m_manager;
 
-    double m_latitude = 0.0;
-    double m_longitude = 0.0;
-    double m_altitude = 0.0;
+    QGeoCoordinate m_coordinate = QGeoCoordinate();
 
     double m_speed = 0.0;
     double m_direction = 0.0;
+
+    QDateTime m_lastUpdate;
 
     Accuracy m_accuracy;
 };
