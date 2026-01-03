@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Chupligin Sergey <neochapay@gmail.com>
+ * Copyright (C) 2026 Chupligin Sergey <neochapay@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -17,20 +17,25 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef ACCURACY_H
-#define ACCURACY_H
+#ifndef LOCATIONDAEMONCLIENTRESOLVER_H
+#define LOCATIONDAEMONCLIENTRESOLVER_H
 
-#include <QtDBus/QtDBus>
+#include <QDBusObjectPath>
+#include <QObject>
 
-struct Accuracy {
-    int level;
-    double horizontal;
-    double vertical;
+#include "pluginmanager.h"
+
+class LocationDaemonClientResolver : public QObject {
+    Q_OBJECT
+public:
+    explicit LocationDaemonClientResolver(QObject* parent = nullptr);
+
+public slots:
+    QDBusObjectPath Create();
+
+private:
+    int m_clientCount;
+    PluginManager* m_pluginManager;
 };
 
-Q_DECLARE_METATYPE(Accuracy)
-
-QDBusArgument& operator<<(QDBusArgument& arg, const Accuracy& acc);
-const QDBusArgument& operator>>(const QDBusArgument& arg, Accuracy& acc);
-
-#endif // ACCURACY_H
+#endif // LOCATIONDAEMONCLIENTRESOLVER_H

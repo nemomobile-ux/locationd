@@ -204,8 +204,6 @@ void LocationDaemonPositionResolver::onProviderPositionUpdated()
             used_prn.push_back(s.satelliteIdentifier());
         }
 
-        qDebug() << sat_info;
-
         emit SatelliteChanged(m_lastUpdate.currentSecsSinceEpoch(), satellite_used, satellite_visible, used_prn, sat_info);
     }
 }
