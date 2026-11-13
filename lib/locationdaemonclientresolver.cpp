@@ -23,27 +23,30 @@
 #include "masterclientdaptor.h"
 #include "positionadaptor.h"
 #include "satelliteadaptor.h"
+#include "velocityadaptor.h"
 
 LocationDaemonClientResolver::LocationDaemonClientResolver(QObject* parent)
     : QObject { parent }
     , m_clientCount(-1)
 {
     m_pluginManager = new PluginManager();
-    m_pluginManager->loadPlugins("/usr/lib/locationd/plugins/");
+    QString pluginPath = qEnvironmentVariable("LOCATIOND_PLUGIN_PATH", "/usr/lib/locationd/plugins/");
+    m_pluginManager->loadPlugins(pluginPath);
 }
 
 QDBusObjectPath LocationDaemonClientResolver::Create()
 {
-    LocationDaemonPositionResolver* resolver = new LocationDaemonPositionResolver(m_pluginManager, this);
+    QDBusConnection bus = QDBusConnection::sessionBus();
+    QString path = QString("/org/freedesktop/Geoclue/Master/client%1").arg(++m_clientCount);
+
+    LocationDaemonPositionResolver* resolver = new LocationDaemonPositionResolver(m_pluginManager, path, this);
 
     GeoclueAdaptor* geoclueMain = new GeoclueAdaptor(resolver);
     MasterClientAdaptor* masterClient = new MasterClientAdaptor(resolver);
     PositionAdaptor* positon = new PositionAdaptor(resolver);
     AddressAdaptor* address = new AddressAdaptor(resolver);
     SatelliteAdaptor* satelittes = new SatelliteAdaptor(resolver);
-
-    QDBusConnection bus = QDBusConnection::sessionBus();
-    QString path = QString("/org/freedesktop/Geoclue/Master/client%1").arg(++m_clientCount);
+    VelocityAdaptor* velocity = new VelocityAdaptor(resolver);
 
     if (!bus.registerObject(
             path,

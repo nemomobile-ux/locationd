@@ -31,4 +31,4 @@ install(TARGETS ${PROJECT} RUNTIME
     DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/locationd/)
 
 install(FILES ${CMAKE_BINARY_DIR}/master/org.freedesktop.Geoclue.Master.service
-    DESTINATION DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/dbus-1/services)
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/dbus-1/services)

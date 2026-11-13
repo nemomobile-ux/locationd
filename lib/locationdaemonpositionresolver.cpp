@@ -21,9 +21,10 @@
 
 #include <QDateTime>
 
-LocationDaemonPositionResolver::LocationDaemonPositionResolver(PluginManager* manager, QObject* parent)
+LocationDaemonPositionResolver::LocationDaemonPositionResolver(PluginManager* manager, const QString& objectPath, QObject* parent)
     : QObject { parent }
     , m_pluginManager(manager)
+    , m_objectPath(objectPath.isEmpty() ? QStringLiteral("/org/freedesktop/Geoclue/Master/client0") : objectPath)
     , m_refCount(0)
 {
     connect(m_pluginManager, &PluginManager::providerPositionUpdated, this, &LocationDaemonPositionResolver::onProviderPositionUpdated);
@@ -53,7 +54,7 @@ QString LocationDaemonPositionResolver::GetProviderInfo(QString& Description)
 
 int LocationDaemonPositionResolver::GetStatus()
 {
-    return -1;
+    return 3; // GEOCLUE_STATUS_AVAILABLE
 }
 
 void LocationDaemonPositionResolver::SetOptions(const QVariantMap& options)
@@ -82,7 +83,7 @@ QString LocationDaemonPositionResolver::GetPositionProvider(QString& description
     QString name = "NemoMobile location daemon";
     description = "NemoMobile Location provider";
     service = "org.freedesktop.Geoclue.Master";
-    path = "/org/freedesktop/Geoclue/Master/client0";
+    path = m_objectPath;
 
     emit PositionProviderChanged(name, description, service, path);
     return name;
@@ -95,7 +96,7 @@ void LocationDaemonPositionResolver::PositionStart()
     QString name = "NemoMobile location daemon";
     QString description = "NemoMobile Location provider";
     QString service = "org.freedesktop.Geoclue.Master";
-    QString path = "/org/freedesktop/Geoclue/Master/client0";
+    QString path = m_objectPath;
 
     emit PositionProviderChanged(name, description, service, path);
 }
@@ -129,12 +130,12 @@ int LocationDaemonPositionResolver::GetPosition(int& timestamp, double& latitude
 {
     if (!m_pluginManager->bestProvider()) {
         qDebug() << "Without provider!";
-        return -1;
+        return 0;
     }
 
     if (!m_lastCoord.isValid()) {
         m_pluginManager->bestProvider()->requestLocationUpdate();
-        return -1;
+        return 0;
     }
 
     timestamp = m_lastUpdate.currentSecsSinceEpoch();
@@ -142,7 +143,24 @@ int LocationDaemonPositionResolver::GetPosition(int& timestamp, double& latitude
     longitude = m_lastCoord.longitude();
     altitude = m_lastCoord.altitude();
     accuracy = m_lastAccuracy;
-    return 1;
+    return Latitude | Longitude | Altitude;
+}
+
+int LocationDaemonPositionResolver::GetVelocity(int& timestamp, double& speed, double& direction, double& climb)
+{
+    if (!m_pluginManager->bestProvider()) {
+        return 0;
+    }
+
+    if (!m_lastCoord.isValid()) {
+        return 0;
+    }
+
+    timestamp = m_lastUpdate.currentSecsSinceEpoch();
+    speed = m_pluginManager->bestProvider()->speed();
+    direction = m_pluginManager->bestProvider()->direction();
+    climb = 0.0;
+    return 1 | 2; // speed | direction
 }
 
 int LocationDaemonPositionResolver::GetAddress(QVariantMap& address, Accuracy& accuracy)
@@ -154,23 +172,28 @@ int LocationDaemonPositionResolver::GetAddress(QVariantMap& address, Accuracy& a
     return 1;
 }
 
-int LocationDaemonPositionResolver::GetLastSatellite(int &satellite_used, int &satellite_visible, QList<qint32> &used_prn, QList<QGeoSatelliteInfo> &sat_info)
+int LocationDaemonPositionResolver::GetLastSatellite(int& satellite_used, int& satellite_visible, QList<int>& used_prn, QList<QGeoSatelliteInfo>& sat_info)
 {
-    if(m_pluginManager->bestProvider()->satellites().satellitesView.count() < 1) {
-        return -1;
+    if (!m_pluginManager->bestProvider()) {
+        return 0;
+    }
+    if (m_pluginManager->bestProvider()->satellites().satellitesView.count() < 1) {
+        return 0;
     }
 
+    int timestamp = m_lastUpdate.currentSecsSinceEpoch();
     satellite_visible = m_pluginManager->bestProvider()->satellites().satellitesView.count();
     satellite_used = m_pluginManager->bestProvider()->satellites().satellitesUsed.count();
     sat_info = m_pluginManager->bestProvider()->satellites().satellitesView;
 
+    used_prn.clear();
     foreach (QGeoSatelliteInfo s, m_pluginManager->bestProvider()->satellites().satellitesUsed) {
         used_prn.push_back(s.satelliteIdentifier());
     }
-    return 1;
+    return timestamp;
 }
 
-int LocationDaemonPositionResolver::GetSatellite(int &satellite_used, int &satellite_visible, QList<qint32> &used_prn, QList<QGeoSatelliteInfo> &sat_info)
+int LocationDaemonPositionResolver::GetSatellite(int& satellite_used, int& satellite_visible, QList<int>& used_prn, QList<QGeoSatelliteInfo>& sat_info)
 {
     return GetLastSatellite(satellite_used, satellite_visible, used_prn, sat_info);
 }
@@ -190,6 +213,9 @@ void LocationDaemonPositionResolver::onProviderPositionUpdated()
                // TODO fix me!
         int feelds = Latitude | Longitude | Altitude;
         emit PositionChanged(feelds, m_lastUpdate.currentSecsSinceEpoch(), coord.latitude(), coord.longitude(), coord.altitude(), m_lastAccuracy);
+
+        int vfields = 1 | 2; // speed | direction
+        emit VelocityChanged(vfields, m_lastUpdate.currentSecsSinceEpoch(), m_pluginManager->bestProvider()->speed(), m_pluginManager->bestProvider()->direction(), 0.0);
     }
 
            //TODO need check for update
@@ -198,7 +224,7 @@ void LocationDaemonPositionResolver::onProviderPositionUpdated()
         int satellite_visible = m_pluginManager->bestProvider()->satellites().satellitesView.count();
         int satellite_used = m_pluginManager->bestProvider()->satellites().satellitesUsed.count();
         QList<QGeoSatelliteInfo> sat_info = m_pluginManager->bestProvider()->satellites().satellitesView;
-        QList<qint32> used_prn;
+        QList<int> used_prn;
 
         foreach (QGeoSatelliteInfo s, m_pluginManager->bestProvider()->satellites().satellitesUsed) {
             used_prn.push_back(s.satelliteIdentifier());
@@ -213,7 +239,7 @@ void LocationDaemonPositionResolver::onBestProviderChanged()
     QString name = "NemoMobile location daemon";
     QString description = "NemoMobile Location provider";
     QString service = "org.freedesktop.Geoclue.Master";
-    QString path = "/org/freedesktop/Geoclue/Master/client0";
+    QString path = m_objectPath;
 
     emit PositionProviderChanged(name, description, service, path);
     onProviderPositionUpdated();

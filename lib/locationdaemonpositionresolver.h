@@ -40,7 +40,7 @@ public:
         Altitude = 1 << 2 // 4
     };
 
-    explicit LocationDaemonPositionResolver(PluginManager* manager, QObject* parent = nullptr);
+    explicit LocationDaemonPositionResolver(PluginManager* manager, const QString& objectPath = QString(), QObject* parent = nullptr);
 
 public slots:
     // org.freedesktop.Geoclue
@@ -64,9 +64,12 @@ public slots:
     // org.freedesktop.Geoclue.Address
     int GetAddress(QVariantMap& address, Accuracy& accuracy);
 
+    // org.freedesktop.Geoclue.Velocity
+    int GetVelocity(int& timestamp, double& speed, double& direction, double& climb);
+
     // org.freedesktop.Geoclue.Satellite
-    int GetLastSatellite(int &satellite_used, int &satellite_visible, QList<qint32> &used_prn, QList<QGeoSatelliteInfo> &sat_info);
-    int GetSatellite(int &satellite_used, int &satellite_visible, QList<qint32> &used_prn, QList<QGeoSatelliteInfo> &sat_info);
+    int GetLastSatellite(int& satellite_used, int& satellite_visible, QList<int>& used_prn, QList<QGeoSatelliteInfo>& sat_info);
+    int GetSatellite(int& satellite_used, int& satellite_visible, QList<int>& used_prn, QList<QGeoSatelliteInfo>& sat_info);
 
 private slots:
     void onProviderPositionUpdated();
@@ -76,13 +79,16 @@ Q_SIGNALS:
     void PositionProviderChanged(const QString& name, const QString& description, const QString& service, const QString& path);
     void PositionChanged(int fields, int timestamp, double latitude, double longitude, double altitude, Accuracy accuracy);
 
-    void SatelliteChanged(int timestamp, int satellite_used, int satellite_visible, const QList<qint32> used_prn, const QList<QGeoSatelliteInfo> sat_info);
+    void VelocityChanged(int fields, int timestamp, double speed, double direction, double climb);
+
+    void SatelliteChanged(int timestamp, int satellite_used, int satellite_visible, const QList<int> used_prn, const QList<QGeoSatelliteInfo> sat_info);
 
 private:
     int m_refCount;
     QDateTime m_lastUpdate;
     QTimer* m_updateTimer;
     PluginManager* m_pluginManager;
+    QString m_objectPath;
     QGeoCoordinate m_lastCoord;
     Accuracy m_lastAccuracy;
     QVariantMap m_option;
