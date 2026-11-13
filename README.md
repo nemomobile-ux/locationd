@@ -1,6 +1,6 @@
 # locationd
 
-`locationd` is a Qt 6 location daemon for NemoMobile providing a GeoClue 1-compatible D-Bus API. It aggregates location data from provider plugins and exposes position, satellite, velocity, address, and reverse-geocoding interfaces to clients (including Qt Positioning).
+`locationd` is a Qt 6 location daemon for NemoMobile providing a GeoClue 1-compatible D-Bus API (with an optional GeoClue 2 compatibility layer). It aggregates location data from provider plugins and exposes position, satellite, velocity, address, and reverse-geocoding interfaces to clients (including Qt Positioning).
 
 ## Components
 
@@ -23,6 +23,7 @@ make -j$(nproc)
 Optional CMake options:
 
 - `-DENABLE_MCE_DSME=ON` – enable MCE/DSME power management integration (pauses/resumes providers based on display/device state).
+- `-DENABLE_GEOCLUE2=ON` – enable the GeoClue 2 compatibility layer.
 
 ## Installation
 
@@ -92,9 +93,16 @@ Entries are matched against D-Bus caller name, executable name, or PID. An empty
 
 ## D-Bus interfaces
 
-Master: `org.freedesktop.Geoclue.Master` on `/org/freedesktop/Geoclue/Master` (session bus) with `Create`, `RegisterAuthorizationAgent`, `UnregisterAuthorizationAgent`.
+**GeoClue 1 (session bus)**
 
-Per-client interfaces (GeoClue 1): `org.freedesktop.Geoclue`, `org.freedesktop.Geoclue.MasterClient`, `org.freedesktop.Geoclue.Position`, `org.freedesktop.Geoclue.Address`, `org.freedesktop.Geoclue.Satellite`, `org.freedesktop.Geoclue.Velocity`, `org.freedesktop.Geoclue.ReverseGeocode`.
+- Master: `org.freedesktop.Geoclue.Master` on `/org/freedesktop/Geoclue/Master` (`Create`, `RegisterAuthorizationAgent`, `UnregisterAuthorizationAgent`).
+- Per-client interfaces: `org.freedesktop.Geoclue`, `org.freedesktop.Geoclue.MasterClient`, `org.freedesktop.Geoclue.Position`, `org.freedesktop.Geoclue.Address`, `org.freedesktop.Geoclue.Satellite`, `org.freedesktop.Geoclue.Velocity`, `org.freedesktop.Geoclue.ReverseGeocode`.
+
+**GeoClue 2 (optional, session bus, `-DENABLE_GEOCLUE2=ON`)**
+
+- Manager: `org.freedesktop.GeoClue2.Manager` on `/org/freedesktop/GeoClue2/Manager` (`GetClient`, `InUse`, `AvailableAccuracyLevel`).
+- Client: `org.freedesktop.GeoClue2.Client` (`Start`, `Stop`, `Location`, `DesktopId`, `RequestedAccuracyLevel`, `DistanceThreshold`, `LocationUpdated`).
+- Location: `org.freedesktop.GeoClue2.Location` (`Latitude`, `Longitude`, `Accuracy`, `Altitude`, `Speed`, `Heading`).
 
 ## Tests
 
