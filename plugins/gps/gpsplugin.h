@@ -36,7 +36,7 @@ public:
     ~GPSProvider() override;
 
     void setActive(bool active) override;
-    bool isAvailable() const override { return m_fd >= 0; }
+    bool isAvailable() const override { return m_fd >= 0 && m_coordinate.isValid(); }
     int priority() const override { return 100; }
 
     QGeoCoordinate coordinate() const override { return m_coordinate; }
