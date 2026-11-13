@@ -28,7 +28,7 @@
 class LocationDaemonClientResolver : public QObject {
     Q_OBJECT
 public:
-    explicit LocationDaemonClientResolver(QObject* parent = nullptr);
+    explicit LocationDaemonClientResolver(PluginManager* pluginManager, QObject* parent = nullptr);
 
 public slots:
     QDBusObjectPath Create();

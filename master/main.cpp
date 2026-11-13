@@ -42,8 +42,13 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    // Shared plugin manager for all clients (avoids duplicate provider/API requests)
+    PluginManager* pluginManager = new PluginManager();
+    QString pluginPath = qEnvironmentVariable("LOCATIOND_PLUGIN_PATH", "/usr/lib/locationd/plugins/");
+    pluginManager->loadPlugins(pluginPath);
+
     // Master service
-    LocationDaemonClientResolver* clientService = new LocationDaemonClientResolver();
+    LocationDaemonClientResolver* clientService = new LocationDaemonClientResolver(pluginManager);
     MasterAdaptor masterAdaptor(clientService);
 
     if (!bus.registerObject(

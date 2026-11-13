@@ -99,6 +99,7 @@ void LocationDaemonPositionResolver::PositionStart()
     QString path = m_objectPath;
 
     emit PositionProviderChanged(name, description, service, path);
+    onProviderPositionUpdated();
 }
 
 void LocationDaemonPositionResolver::SetRequirements(int accuracy_level, int time, bool require_updates, int allowed_resources)

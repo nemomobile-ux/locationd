@@ -25,13 +25,11 @@
 #include "satelliteadaptor.h"
 #include "velocityadaptor.h"
 
-LocationDaemonClientResolver::LocationDaemonClientResolver(QObject* parent)
+LocationDaemonClientResolver::LocationDaemonClientResolver(PluginManager* pluginManager, QObject* parent)
     : QObject { parent }
     , m_clientCount(-1)
+    , m_pluginManager(pluginManager)
 {
-    m_pluginManager = new PluginManager();
-    QString pluginPath = qEnvironmentVariable("LOCATIOND_PLUGIN_PATH", "/usr/lib/locationd/plugins/");
-    m_pluginManager->loadPlugins(pluginPath);
 }
 
 QDBusObjectPath LocationDaemonClientResolver::Create()
