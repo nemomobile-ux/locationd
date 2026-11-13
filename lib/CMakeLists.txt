@@ -31,6 +31,11 @@ set(SRCS
     locationdaemonpositionresolver.cpp
 )
 
+if(ENABLE_MCE_DSME)
+    list(APPEND SRCS powermanager.cpp)
+    add_definitions(-DENABLE_MCE_DSME)
+endif()
+
 set(HEADERS
     pluginmanager.h
     ilocationprovider.h
@@ -39,6 +44,10 @@ set(HEADERS
     locationdaemonclientresolver.h
     locationdaemonpositionresolver.h
 )
+
+if(ENABLE_MCE_DSME)
+    list(APPEND HEADERS powermanager.h)
+endif()
 
 add_library(location SHARED
     ${SRCS}

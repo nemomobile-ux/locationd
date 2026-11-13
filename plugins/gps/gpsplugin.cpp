@@ -19,6 +19,7 @@
 
 #include "gpsplugin.h"
 #include <QDebug>
+#include <QSettings>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -27,21 +28,60 @@
 GPSProvider::GPSProvider(QObject* parent)
     : ILocationProvider(parent)
 {
-    m_fd = ::open("/dev/ttyACM0", O_RDONLY | O_NONBLOCK);
+    loadConfig();
+    int flags = O_NONBLOCK;
+    if (!m_wakeupCommand.isEmpty() || !m_sleepCommand.isEmpty()) {
+        flags |= O_RDWR;
+    } else {
+        flags |= O_RDONLY;
+    }
+    m_fd = ::open(m_devicePath.toLocal8Bit().constData(), flags);
     if (m_fd < 0) {
-        qWarning() << "GPSProvider: cannot open /dev/ttyACM0";
+        qWarning() << "GPSProvider: cannot open" << m_devicePath;
         return;
     }
 }
 
 GPSProvider::~GPSProvider()
 {
-    if (m_fd >= 0)
+    if (m_fd >= 0) {
+        if (m_active && !m_sleepCommand.isEmpty()) {
+            sendCommand(m_sleepCommand);
+        }
         ::close(m_fd);
+    }
+}
+
+void GPSProvider::loadConfig()
+{
+    QString configPath = qEnvironmentVariable("LOCATIOND_GPS_CONFIG", "/etc/locationd/gps.conf");
+    QSettings settings(configPath, QSettings::IniFormat);
+    m_devicePath = settings.value("device", m_devicePath).toString();
+    m_wakeupCommand = settings.value("wakeupCommand", m_wakeupCommand).toString();
+    m_sleepCommand = settings.value("sleepCommand", m_sleepCommand).toString();
+}
+
+void GPSProvider::sendCommand(const QString& cmd)
+{
+    if (m_fd < 0 || cmd.isEmpty())
+        return;
+    QByteArray data = cmd.toUtf8();
+    data.replace("\\r", "\r");
+    data.replace("\\n", "\n");
+    ::write(m_fd, data.constData(), data.size());
 }
 
 void GPSProvider::setActive(bool active)
 {
+    if (m_active == active)
+        return;
+    m_active = active;
+    if (active) {
+        sendCommand(m_wakeupCommand);
+        readData();
+    } else {
+        sendCommand(m_sleepCommand);
+    }
 }
 
 void GPSProvider::requestLocationUpdate()
@@ -100,5 +140,7 @@ void GPSProvider::readData()
         }
     }
 
-    QTimer::singleShot(50, this, &GPSProvider::readData);
+    if (m_active) {
+        QTimer::singleShot(50, this, &GPSProvider::readData);
+    }
 }

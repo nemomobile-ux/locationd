@@ -35,6 +35,7 @@ public:
     Accuracy lastAccuracy() const { return m_lastAccuracy; }
     bool hasPosition() const { return m_lastCoord.isValid(); }
     void setActive(bool active);
+    void setPowerAllowed(bool allowed);
 
 signals:
     void bestProviderChanged();
@@ -54,6 +55,7 @@ private:
 
     QSet<QString> m_clients;
     bool m_active = false;
+    bool m_powerAllowed = true;
 
     void activateProviders();
     void deactivateProviders();

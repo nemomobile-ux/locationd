@@ -31,6 +31,13 @@ GeoIPProvider::GeoIPProvider(QObject* parent)
 {
     m_manager = new QNetworkAccessManager(this);
 
+    QNetworkInformation::loadDefaultBackend();
+    m_netConfigManager = QNetworkInformation::instance();
+    if (m_netConfigManager) {
+        connect(m_netConfigManager, &QNetworkInformation::reachabilityChanged,
+                this, &GeoIPProvider::queryGeoIP);
+    }
+
     QDBusConnection bus = QDBusConnection::systemBus();
     if (!bus.isConnected()) {
         qWarning() << "GeoIPProvider: Cannot connect to system bus";

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 project(locationd VERSION 1.0 LANGUAGES CXX)
 
+option(ENABLE_MCE_DSME "Enable MCE/DSME power management integration" OFF)
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)

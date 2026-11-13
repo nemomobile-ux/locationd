@@ -23,6 +23,7 @@
 #include "ilocationprovider.h"
 #include "nmeaparser.h"
 #include <QObject>
+#include <QString>
 #include <QTimer>
 #include <QVector>
 
@@ -53,10 +54,16 @@ public slots:
 
 private:
     void readData();
+    void loadConfig();
+    void sendCommand(const QString& cmd);
 
 private:
     int m_fd = -1;
     QByteArray m_buffer;
+    QString m_devicePath = QStringLiteral("/dev/ttyACM0");
+    QString m_wakeupCommand;
+    QString m_sleepCommand;
+    bool m_active = false;
 
     QGeoCoordinate m_coordinate;
     double m_speed = 0.0;

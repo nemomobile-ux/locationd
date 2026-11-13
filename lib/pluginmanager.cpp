@@ -24,11 +24,19 @@
 #include <QDir>
 #include <QPluginLoader>
 
+#ifdef ENABLE_MCE_DSME
+#include "powermanager.h"
+#endif
+
 PluginManager::PluginManager(QObject* parent)
     : QObject(parent)
 {
     connect(QDBusConnection::sessionBus().interface(), &QDBusConnectionInterface::serviceOwnerChanged,
         this, &PluginManager::onNameOwnerChanged);
+
+#ifdef ENABLE_MCE_DSME
+    new PowerManager(this, this);
+#endif
 }
 
 void PluginManager::loadPlugins(const QString& path)
@@ -65,12 +73,33 @@ void PluginManager::loadPlugins(const QString& path)
 
 void PluginManager::setActive(bool active)
 {
+    if (!m_powerAllowed && active) {
+        m_active = false;
+        return;
+    }
     m_active = active;
     if (active) {
         foreach (ILocationProvider* p, m_providers) {
             p->setActive(true);
         }
         getProviderPosition();
+    } else {
+        foreach (ILocationProvider* p, m_providers) {
+            p->setActive(false);
+        }
+    }
+}
+
+void PluginManager::setPowerAllowed(bool allowed)
+{
+    m_powerAllowed = allowed;
+    if (!allowed) {
+        setActive(false);
+    } else {
+        // reactivate if there are clients
+        if (!m_clients.isEmpty()) {
+            setActive(true);
+        }
     }
 }
 
@@ -154,5 +183,8 @@ void PluginManager::deactivateProviders()
     qInfo() << "Deactivating providers";
     m_active = false;
 
+    foreach (ILocationProvider* p, m_providers) {
+        p->setActive(false);
+    }
     m_bestProvider = nullptr;
 }

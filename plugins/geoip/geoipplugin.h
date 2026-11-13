@@ -21,6 +21,7 @@
 #define GEOIPPLUGIN_H
 
 #include <QNetworkAccessManager>
+#include <QNetworkInformation>
 #include <QObject>
 
 #include "ilocationprovider.h"
@@ -57,6 +58,7 @@ private slots:
 
 private:
     QNetworkAccessManager* m_manager;
+    QNetworkInformation* m_netConfigManager;
 
     QGeoCoordinate m_coordinate = QGeoCoordinate();
 
