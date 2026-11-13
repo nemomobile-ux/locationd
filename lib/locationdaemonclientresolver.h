@@ -20,12 +20,13 @@
 #ifndef LOCATIONDAEMONCLIENTRESOLVER_H
 #define LOCATIONDAEMONCLIENTRESOLVER_H
 
+#include <QDBusContext>
 #include <QDBusObjectPath>
 #include <QObject>
 
 #include "pluginmanager.h"
 
-class LocationDaemonClientResolver : public QObject {
+class LocationDaemonClientResolver : public QObject, protected QDBusContext {
     Q_OBJECT
 public:
     explicit LocationDaemonClientResolver(PluginManager* pluginManager, QObject* parent = nullptr);
