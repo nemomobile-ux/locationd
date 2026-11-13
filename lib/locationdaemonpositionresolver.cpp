@@ -38,6 +38,9 @@ LocationDaemonPositionResolver::LocationDaemonPositionResolver(PluginManager* ma
 void LocationDaemonPositionResolver::AddReference()
 {
     m_refCount++;
+    if (!m_passive) {
+        m_pluginManager->setActive(true);
+    }
     onProviderPositionUpdated();
 }
 
@@ -91,7 +94,9 @@ QString LocationDaemonPositionResolver::GetPositionProvider(QString& description
 
 void LocationDaemonPositionResolver::PositionStart()
 {
-    m_pluginManager->setActive(true);
+    if (!m_passive) {
+        m_pluginManager->setActive(true);
+    }
 
     QString name = "NemoMobile location daemon";
     QString description = "NemoMobile Location provider";
@@ -104,6 +109,8 @@ void LocationDaemonPositionResolver::PositionStart()
 
 void LocationDaemonPositionResolver::SetRequirements(int accuracy_level, int time, bool require_updates, int allowed_resources)
 {
+    m_passive = (!require_updates && allowed_resources == 0);
+
     qDebug() << "SetRequirements called:"
              << "accuracy_level=" << accuracy_level
              << "time=" << time
@@ -129,21 +136,35 @@ void LocationDaemonPositionResolver::SetRequirements(int accuracy_level, int tim
 
 int LocationDaemonPositionResolver::GetPosition(int& timestamp, double& latitude, double& longitude, double& altitude, Accuracy& accuracy)
 {
-    if (!m_pluginManager->bestProvider()) {
-        qDebug() << "Without provider!";
+    QGeoCoordinate coord = m_lastCoord;
+    Accuracy acc = m_lastAccuracy;
+    QDateTime upd = m_lastUpdate;
+
+    if (m_pluginManager->bestProvider() && m_pluginManager->bestProvider()->coordinate().isValid()) {
+        coord = m_pluginManager->bestProvider()->coordinate();
+        acc = m_pluginManager->bestProvider()->accuracy();
+        upd = m_pluginManager->bestProvider()->lastUpdate();
+    } else if (m_pluginManager->hasPosition()) {
+        coord = m_pluginManager->lastCoordinate();
+        acc = m_pluginManager->lastAccuracy();
+        upd = m_pluginManager->lastUpdate();
+    }
+
+    if (!coord.isValid()) {
+        if (m_pluginManager->bestProvider()) {
+            m_pluginManager->bestProvider()->requestLocationUpdate();
+        }
         return 0;
     }
 
-    if (!m_lastCoord.isValid()) {
-        m_pluginManager->bestProvider()->requestLocationUpdate();
-        return 0;
-    }
-
-    timestamp = m_lastUpdate.currentSecsSinceEpoch();
-    latitude = m_lastCoord.latitude();
-    longitude = m_lastCoord.longitude();
-    altitude = m_lastCoord.altitude();
-    accuracy = m_lastAccuracy;
+    timestamp = upd.currentSecsSinceEpoch();
+    latitude = coord.latitude();
+    longitude = coord.longitude();
+    altitude = coord.altitude();
+    accuracy = acc;
+    m_lastCoord = coord;
+    m_lastAccuracy = acc;
+    m_lastUpdate = upd;
     return Latitude | Longitude | Altitude;
 }
 
@@ -201,22 +222,41 @@ int LocationDaemonPositionResolver::GetSatellite(int& satellite_used, int& satel
 
 void LocationDaemonPositionResolver::onProviderPositionUpdated()
 {
-    if (!m_pluginManager->bestProvider()) {
+    QGeoCoordinate coord;
+    Accuracy accuracy;
+    QDateTime update;
+    double speed = 0.0;
+    double direction = 0.0;
+
+    if (m_pluginManager->bestProvider()) {
+        coord = m_pluginManager->bestProvider()->coordinate();
+        accuracy = m_pluginManager->bestProvider()->accuracy();
+        update = m_pluginManager->bestProvider()->lastUpdate();
+        speed = m_pluginManager->bestProvider()->speed();
+        direction = m_pluginManager->bestProvider()->direction();
+    } else if (m_pluginManager->hasPosition()) {
+        coord = m_pluginManager->lastCoordinate();
+        accuracy = m_pluginManager->lastAccuracy();
+        update = m_pluginManager->lastUpdate();
+    } else {
         return;
     }
 
-    QGeoCoordinate coord = m_pluginManager->bestProvider()->coordinate();
-    if (coord.isValid() && coord != m_lastCoord) {
-        m_lastAccuracy = m_pluginManager->bestProvider()->accuracy();
+    if (!coord.isValid()) {
+        return;
+    }
+
+    if (coord != m_lastCoord) {
+        m_lastAccuracy = accuracy;
         m_lastCoord = coord;
-        m_lastUpdate = m_pluginManager->bestProvider()->lastUpdate();
+        m_lastUpdate = update;
 
                // TODO fix me!
         int feelds = Latitude | Longitude | Altitude;
         emit PositionChanged(feelds, m_lastUpdate.currentSecsSinceEpoch(), coord.latitude(), coord.longitude(), coord.altitude(), m_lastAccuracy);
 
         int vfields = 1 | 2; // speed | direction
-        emit VelocityChanged(vfields, m_lastUpdate.currentSecsSinceEpoch(), m_pluginManager->bestProvider()->speed(), m_pluginManager->bestProvider()->direction(), 0.0);
+        emit VelocityChanged(vfields, m_lastUpdate.currentSecsSinceEpoch(), speed, direction, 0.0);
     }
 
            //TODO need check for update

@@ -30,6 +30,10 @@ public:
     explicit PluginManager(QObject* parent = nullptr);
     void loadPlugins(const QString& path);
     ILocationProvider* bestProvider() const { return m_bestProvider; }
+    QGeoCoordinate lastCoordinate() const { return m_lastCoord; }
+    QDateTime lastUpdate() const { return m_lastUpdate; }
+    Accuracy lastAccuracy() const { return m_lastAccuracy; }
+    bool hasPosition() const { return m_lastCoord.isValid(); }
     void setActive(bool active);
 
 signals:
@@ -45,6 +49,8 @@ private:
     ILocationProvider* m_bestProvider = nullptr;
 
     QGeoCoordinate m_lastCoord;
+    QDateTime m_lastUpdate;
+    Accuracy m_lastAccuracy;
 
     QSet<QString> m_clients;
     bool m_active = false;

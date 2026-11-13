@@ -97,14 +97,20 @@ void PluginManager::getProviderPosition()
         return;
     }
 
-    if (best != m_bestProvider) {
+    bool bestChanged = (best != m_bestProvider);
+    if (bestChanged) {
         m_bestProvider = best;
         emit bestProviderChanged();
     }
 
-    if (m_bestProvider->coordinate() != m_lastCoord) {
+    if (m_bestProvider && m_bestProvider->coordinate().isValid()) {
+        bool coordChanged = (m_bestProvider->coordinate() != m_lastCoord);
         m_lastCoord = m_bestProvider->coordinate();
-        emit providerPositionUpdated();
+        m_lastUpdate = m_bestProvider->lastUpdate();
+        m_lastAccuracy = m_bestProvider->accuracy();
+        if (coordChanged || bestChanged) {
+            emit providerPositionUpdated();
+        }
     }
 }
 

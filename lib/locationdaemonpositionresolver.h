@@ -89,6 +89,7 @@ private:
     QTimer* m_updateTimer;
     PluginManager* m_pluginManager;
     QString m_objectPath;
+    bool m_passive = false;
     QGeoCoordinate m_lastCoord;
     Accuracy m_lastAccuracy;
     QVariantMap m_option;
