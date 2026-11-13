@@ -19,6 +19,8 @@
 
 #include "locationdaemonclientresolver.h"
 #include "addressadaptor.h"
+#include <QDBusInterface>
+#include <QDBusReply>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -36,30 +38,48 @@ LocationDaemonClientResolver::LocationDaemonClientResolver(PluginManager* plugin
 {
 }
 
+void LocationDaemonClientResolver::RegisterAuthorizationAgent(const QString& service, const QString& path)
+{
+    m_agentService = service;
+    m_agentPath = path;
+    qInfo() << "Authorization agent registered:" << service << path;
+}
+
+void LocationDaemonClientResolver::UnregisterAuthorizationAgent()
+{
+    m_agentService.clear();
+    m_agentPath.clear();
+}
+
 QDBusObjectPath LocationDaemonClientResolver::Create()
 {
     // Authorization check
     if (calledFromDBus()) {
+        QString caller = message().service();
+        uint pid = connection().interface()->servicePid(caller);
+        QString procPath = QFileInfo(QString("/proc/%1/exe").arg(pid)).symLinkTarget();
+        QString procName = QFileInfo(procPath).fileName();
+
         QStringList allowed;
+        QStringList denied;
 
-        // Main allowlist file
-        QString allowFile = qEnvironmentVariable("LOCATIOND_ALLOWLIST", "/etc/locationd/allowlist");
-        QFile f(allowFile);
-        if (f.exists() && f.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&f);
-            while (!in.atEnd()) {
-                QString line = in.readLine().trimmed();
-                if (line.isEmpty() || line.startsWith('#'))
-                    continue;
-                allowed << line;
+        auto loadList = [&](const QString& file, QStringList& target) {
+            QFile f(file);
+            if (f.exists() && f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&f);
+                while (!in.atEnd()) {
+                    QString line = in.readLine().trimmed();
+                    if (line.isEmpty() || line.startsWith('#'))
+                        continue;
+                    target << line;
+                }
+                f.close();
             }
-            f.close();
-        }
-
-        // Drop-in directory: /etc/locationd/allowlist.d/*.conf
-        QString allowDir = qEnvironmentVariable("LOCATIOND_ALLOWLIST_DIR", "/etc/locationd/allowlist.d");
-        QDir dir(allowDir);
-        if (dir.exists()) {
+        };
+        auto loadDir = [&](const QString& dirPath, QStringList& target, bool allowEmptyBasename) {
+            QDir dir(dirPath);
+            if (!dir.exists())
+                return;
             const QStringList files = dir.entryList(QStringList() << "*.conf", QDir::Files, QDir::Name);
             for (const QString& file : files) {
                 QString fullPath = dir.absoluteFilePath(file);
@@ -71,37 +91,109 @@ QDBusObjectPath LocationDaemonClientResolver::Create()
                         QString line = in.readLine().trimmed();
                         if (line.isEmpty() || line.startsWith('#'))
                             continue;
-                        allowed << line;
+                        target << line;
                         hasEntries = true;
                     }
                     cf.close();
                 }
-                // If the conf file is empty, treat its basename (without .conf) as allowed
-                if (!hasEntries) {
+                if (allowEmptyBasename && !hasEntries) {
                     QString base = QFileInfo(file).baseName();
                     if (!base.isEmpty())
-                        allowed << base;
+                        target << base;
                 }
             }
+        };
+
+        // Allowed
+        loadList(qEnvironmentVariable("LOCATIOND_ALLOWLIST", "/etc/locationd/allowlist"), allowed);
+        loadDir(qEnvironmentVariable("LOCATIOND_ALLOWLIST_DIR", "/etc/locationd/allowlist.d"), allowed, true);
+
+        // Denied
+        loadList(qEnvironmentVariable("LOCATIOND_DENYLIST", "/etc/locationd/denylist"), denied);
+        loadDir(qEnvironmentVariable("LOCATIOND_DENYLIST_DIR", "/etc/locationd/denylist.d"), denied, true);
+
+        auto matches = [&](const QStringList& list) {
+            for (const QString& entry : list) {
+                if (entry == caller || entry == procName || entry == QString::number(pid))
+                    return true;
+            }
+            return false;
+        };
+
+        // Explicit deny takes precedence
+        if (matches(denied)) {
+            qWarning() << "Location access denied for" << caller << procName;
+            return QDBusObjectPath("/org/freedesktop/Geoclue/Master/denied");
         }
 
-        if (!allowed.isEmpty()) {
-            QString caller = message().service();
-            uint pid = connection().interface()->servicePid(caller);
-            QString procPath = QFileInfo(QString("/proc/%1/exe").arg(pid)).symLinkTarget();
-            QString procName = QFileInfo(procPath).fileName();
+        // Explicit allow
+        if (matches(allowed)) {
+            // proceed
+        } else if (!allowed.isEmpty() || !denied.isEmpty()) {
+            // There are rules but app not explicitly allowed -> consult agent if available
+            bool decided = false;
+            bool allow = false;
+            bool always = false;
 
-            bool ok = false;
-            for (const QString& entry : allowed) {
-                if (entry == caller || entry == procName || entry == QString::number(pid)) {
-                    ok = true;
-                    break;
+            if (!m_agentService.isEmpty() && !m_agentPath.isEmpty()) {
+                // Use a separate connection to avoid deadlocking the session bus
+                // while handling the outer Create() call.
+                QDBusConnection authBus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, "locationd-auth");
+                QDBusInterface agent(m_agentService, m_agentPath, "org.freedesktop.Geoclue.Master.AuthorizationAgent", authBus);
+                QDBusReply<int> reply = agent.call("RequestAuthorization", procName, pid, procPath);
+                if (reply.isValid()) {
+                    int choice = reply.value();
+                    if (choice == 1) { // Allow always
+                        allow = true;
+                        always = true;
+                    } else if (choice == 0) { // Allow once
+                        allow = true;
+                        always = false;
+                    } else { // Disallow
+                        allow = false;
+                        always = false;
+                    }
+                    decided = true;
+                } else {
+                    qWarning() << "Agent call failed:" << reply.error().message();
+                }
+                QDBusConnection::disconnectFromBus("locationd-auth");
+            }
+
+            if (!decided) {
+                // No agent or no response: default allow to preserve functionality
+                allow = true;
+                always = false;
+            }
+
+            if (!allow) {
+                // Persist deny if "always" disallow? Store in denylist.d
+                if (always == false && false) {
+                }
+                // For disallow, persist deny rule
+                QString denyDir = qEnvironmentVariable("LOCATIOND_DENYLIST_DIR", "/etc/locationd/denylist.d");
+                QDir().mkpath(denyDir);
+                QFile df(denyDir + "/" + procName + ".conf");
+                if (df.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                    df.write((procName + "\n").toUtf8());
+                    df.close();
+                }
+                qWarning() << "Location access denied for" << caller << procName;
+                return QDBusObjectPath("/org/freedesktop/Geoclue/Master/denied");
+            }
+
+            if (always) {
+                // Persist allow rule
+                QString allowDir2 = qEnvironmentVariable("LOCATIOND_ALLOWLIST_DIR", "/etc/locationd/allowlist.d");
+                QDir().mkpath(allowDir2);
+                QFile af(allowDir2 + "/" + procName + ".conf");
+                if (af.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                    af.write((procName + "\n").toUtf8());
+                    af.close();
                 }
             }
-            if (!ok) {
-                qWarning() << "Location access denied for" << caller << procName;
-                return QDBusObjectPath();
-            }
+        } else {
+            // No rules at all: default allow
         }
     }
 

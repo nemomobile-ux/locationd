@@ -33,10 +33,14 @@ public:
 
 public slots:
     QDBusObjectPath Create();
+    void RegisterAuthorizationAgent(const QString& service, const QString& path);
+    void UnregisterAuthorizationAgent();
 
 private:
     int m_clientCount;
     PluginManager* m_pluginManager;
+    QString m_agentService;
+    QString m_agentPath;
 };
 
 #endif // LOCATIONDAEMONCLIENTRESOLVER_H

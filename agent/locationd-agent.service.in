@@ -1,0 +1,11 @@
+[Unit]
+Description=Location Authorization Agent
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/locationd-agent
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target
